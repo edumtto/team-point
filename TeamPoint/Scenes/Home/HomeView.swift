@@ -8,14 +8,18 @@
 import SwiftUI
 
 struct HomeView: View {
+    let socketManager = SocketIOManager()
+    @State private var textInput: String = ""
+    
     var body: some View {
         HStack {
-            TextField("", text: .constant(""))
+            TextField("", text: $textInput)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
             Spacer()
             Button("Send") {
                 print("Sent")
+                socketManager.sendMessage(sender: "Edu", text: textInput)
             }
         }
         .padding()
