@@ -8,16 +8,17 @@ import SwiftUI
 internal import Combine
 
 protocol HomeViewModelProtocol {
-    func enterRoom(code: Int)
-    func createRoom()
+    func enterRoom(code: String, username: String)
+    func createRoom(username: String)
+    var state: Published<HomeViewState> { get set }
 }
 
 enum HomeViewState {
     case start
-    case loading
+    case enteringRoomInput
+    case creatingRoomInput
+    case loadingRoom
     case error(Error)
-    case enteringName
-    case enteringRoom(roomId: Int, userName: String, isHost: Bool)
 }
 
 class HomeViewModel: ObservableObject {

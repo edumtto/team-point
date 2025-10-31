@@ -19,6 +19,7 @@ struct HomeView: View {
             Spacer()
             Button("Send") {
                 print("Sent")
+                socketManager.establishConnection()
                 socketManager.sendMessage(sender: "Edu", text: textInput)
             }
         }

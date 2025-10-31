@@ -8,6 +8,13 @@
 import SwiftUI
 import SocketIO
 
+private enum CustomSocketEvents: String {
+    case startVoting
+    case vote
+    case reveal
+    
+    var name: String { rawValue }
+}
 
 struct Message: Identifiable, Codable {
     var id = UUID()
@@ -15,21 +22,22 @@ struct Message: Identifiable, Codable {
     let text: String
     var timestamp: Date = Date()
 
-    // Example event names for clarity
-    static let chatEvent = "chatMessage"
+    static let chatEvent = "chat message"
+}
+
+protocol SocketIOManagerProtocol {
+    func sendMessage(_ message: Message)
 }
 
 final class SocketIOManager {
-    // Replace with your actual Socket.IO server URL
+    static let shared = SocketIOManager()
     private let serverURL = URL(string: "http://localhost:3000")!
-    private var manager: SocketManager!
-    private var socket: SocketIOClient!
+    private let manager: SocketManager
+    private let socket: SocketIOClient
 
-    // Closure to handle incoming messages received by the socket
     var onReceiveMessage: ((Message) -> Void)?
 
     init() {
-        // Configure SocketManager
         manager = SocketManager(socketURL: serverURL, config: [.log(false), .compress])
         socket = manager.defaultSocket
         setupSocketEvents()
@@ -47,8 +55,20 @@ final class SocketIOManager {
         }
 
         socket.on(clientEvent: .error) { data, ack in
-            print("Socket error: \(data)")
+            if let error = data.first as? Error {
+                print("Socket error: \(error.localizedDescription)")
+            } else {
+                print("Socket error: \(data)")
+            }
         }
+        
+//        socket.on("connect_error") { data, ack in
+//            if let error = data.first as? String {
+//                print("Connection error: \(error)")
+//            } else {
+//                print("Connection error: \(data)")
+//            }
+//        }
 
         // Custom application events
         socket.on(Message.chatEvent) { [weak self] data, ack in
@@ -96,7 +116,7 @@ final class SocketIOManager {
         ]
 
         // Emit the message data to the server under the predefined event name
-        socket.emit(Message.chatEvent, messageData)
+        socket.emit(Message.chatEvent, text)
         print("Sent message: \(text) by \(sender)")
     }
 

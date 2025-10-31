@@ -7,10 +7,6 @@
 
 import SwiftUI
 
-
-
-var sessionState: SessionState?
-
 @main
 struct TeamPointApp: App {
     var body: some Scene {
