@@ -29,12 +29,19 @@ protocol SocketIOManagerProtocol {
     func sendMessage(_ message: Message)
 }
 
+protocol SocketIOManagerDelegate: AnyObject {
+    func didStartVoting()
+    func didReceiveVote(points: Int, username: String)
+    func didReveal()
+}
+
 final class SocketIOManager {
     static let shared = SocketIOManager()
     private let serverURL = URL(string: "http://localhost:3000")!
     private let manager: SocketManager
     private let socket: SocketIOClient
 
+    weak var delegate: SocketIOManagerDelegate?
     var onReceiveMessage: ((Message) -> Void)?
 
     init() {
