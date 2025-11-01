@@ -1,5 +1,5 @@
 //
-//  SocketIOManager.swift
+//  SocketService.swift
 //  TeamPoint
 //
 //  Created by Eduardo Motta de Oliveira on 10/29/25.
@@ -22,7 +22,7 @@ struct Vote: Codable, SocketData {
     let points: Int
 }
 
-protocol SocketIOManagerProtocol {
+protocol SocketServiceProtocol {
     func establishConnection()
     func closeConnection()
     func joinChannel(_ channelName: String)
@@ -41,7 +41,7 @@ enum Constants {
     static let socketURL = URL(string: "http://localhost:3000")!
 }
 
-final class SocketIOManager: ObservableObject {
+final class SocketService: ObservableObject, SocketServiceProtocol {
     private let socket: SocketIOClient
     weak var delegate: SocketEventsDelegate?
 //    var onReceiveMessage: ((Message) -> Void)?

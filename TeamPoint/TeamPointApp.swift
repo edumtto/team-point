@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct TeamPointApp: App {
-    private let socketManager = SocketIOManager()
+    private let socketManager = SocketService()
     
     var body: some Scene {
         WindowGroup {
