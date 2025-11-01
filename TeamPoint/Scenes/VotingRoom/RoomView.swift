@@ -1,0 +1,287 @@
+//
+//  RoomView.swift
+//  TeamPoint
+//
+//  Created by Eduardo Motta de Oliveira on 10/29/25.
+//
+
+import SwiftUI
+import Combine
+
+// MARK: - Models
+struct Player: Identifiable {
+    let id = UUID()
+    let name: String
+    var selectedCard: Int?
+    var hasVoted: Bool {
+        selectedCard != nil
+    }
+}
+
+enum GameState {
+    case waitingForParticipants
+    case voting(count: Int, total: Int)
+    case waitingForHost
+    case revealed
+    
+    var description: String {
+        switch self {
+        case .waitingForParticipants:
+            return "Waiting for participants..."
+        case .voting(let count, let total):
+            return "\(count) of \(total) votes received"
+        case .waitingForHost:
+            return "Waiting for host..."
+        case .revealed:
+            return "Results revealed"
+        }
+    }
+}
+
+// MARK: - ViewModel
+class RoomViewModel: ObservableObject {
+    @Published var roomNumber: String
+    @Published var gameState: GameState = .voting(count: 2, total: 5)
+    @Published var players: [Player] = [
+        Player(name: "Alice", selectedCard: 5),
+        Player(name: "Bob", selectedCard: 8),
+        Player(name: "Charlie", selectedCard: nil),
+        Player(name: "Diana", selectedCard: 13),
+        Player(name: "Eve", selectedCard: nil)
+    ]
+    @Published var selectedCard: Int? = nil
+    
+    let availableCards: [Int] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+    
+    init(roomNumber: String) {
+        self.roomNumber = roomNumber
+    }
+    
+    func selectCard(_ card: Int) {
+        if selectedCard == card {
+            selectedCard = nil
+        } else {
+            selectedCard = card
+        }
+    }
+    
+    func submitVote() {
+        guard let card = selectedCard else { return }
+        print("Submitting vote: \(card)")
+        // Here you would send the vote to your backend
+    }
+}
+
+// MARK: - Reusable Components
+struct RoomHeaderView: View {
+    let roomNumber: String
+    let gameState: GameState
+    
+    var body: some View {
+        VStack(spacing: AppTheme.Spacing.small) {
+            HStack {
+                Image(systemName: "door.left.hand.open")
+                    .font(.title3)
+                Text("Room")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Text(roomNumber)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.blue)
+            }
+            
+            Text(gameState.description)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.Colors.textSecondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(AppTheme.Colors.cardBackground)
+        .shadow(color: AppTheme.Shadows.card, radius: 5, y: 2)
+    }
+}
+
+struct PlayerCardView: View {
+    let player: Player
+    let isRevealed: Bool
+    
+    var body: some View {
+        VStack(spacing: AppTheme.Spacing.small) {
+            // Card
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                    .fill(player.hasVoted ?
+                          LinearGradient(colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.8)],
+                                       startPoint: .topLeading,
+                                       endPoint: .bottomTrailing) :
+                          LinearGradient(colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                       startPoint: .topLeading,
+                                       endPoint: .bottomTrailing))
+                    .frame(width: 60, height: 90)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                            .stroke(player.hasVoted ? Color.white.opacity(0.5) : Color.gray.opacity(0.3), lineWidth: 2)
+                    )
+                
+                if isRevealed, let card = player.selectedCard {
+                    Text("\(card)")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                } else if player.hasVoted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white)
+                } else {
+                    Image(systemName: "hourglass")
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            // Player name
+            Text(player.name)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(AppTheme.Colors.textPrimary)
+                .lineLimit(1)
+                .frame(width: 70)
+        }
+    }
+}
+
+struct PlayersGridView: View {
+    let players: [Player]
+    let isRevealed: Bool
+    
+    let columns = [
+        GridItem(.adaptive(minimum: 80), spacing: AppTheme.Spacing.large)
+    ]
+    
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: AppTheme.Spacing.large) {
+                ForEach(players) { player in
+                    PlayerCardView(player: player, isRevealed: isRevealed)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+struct SelectableCard: View {
+    let value: Int
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(isSelected ?
+                          AppTheme.Colors.buttonGradient :
+                          LinearGradient(colors: [Color.white, Color.white],
+                                       startPoint: .top,
+                                       endPoint: .bottom))
+                    .frame(width: 70, height: 100)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                            .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
+                    )
+                    .shadow(color: isSelected ? Color.blue.opacity(0.4) : AppTheme.Shadows.card,
+                           radius: isSelected ? 8 : 4,
+                           y: isSelected ? 4 : 2)
+                
+                Text("\(value)")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(isSelected ? .white : .primary)
+            }
+            .offset(y: isSelected ? -10 : 0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct CardSelectorView: View {
+    @Binding var selectedCard: Int?
+    let availableCards: [Int]
+    let onSelect: (Int) -> Void
+    
+    var body: some View {
+        VStack(spacing: AppTheme.Spacing.medium) {
+            Text("Select a card")
+                .font(.headline)
+                .foregroundColor(AppTheme.Colors.textSecondary)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppTheme.Spacing.large) {
+                    ForEach(availableCards, id: \.self) { card in
+                        SelectableCard(
+                            value: card,
+                            isSelected: selectedCard == card,
+                            onTap: { onSelect(card) }
+                        )
+                    }
+                }
+                .padding(.horizontal, AppTheme.Spacing.large)
+                .padding(.vertical, AppTheme.Spacing.medium)
+            }
+        }
+        .padding(.vertical, AppTheme.Spacing.small)
+        .background(AppTheme.Colors.cardBackground)
+        .shadow(color: AppTheme.Shadows.card, radius: 5, y: -2)
+    }
+}
+
+// MARK: - Main Room View
+struct RoomView: View {
+    @StateObject private var viewModel: RoomViewModel
+    
+    init(roomNumber: String) {
+        _viewModel = StateObject(wrappedValue: RoomViewModel(roomNumber: roomNumber))
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            RoomHeaderView(
+                roomNumber: viewModel.roomNumber,
+                gameState: viewModel.gameState
+            )
+            
+            // Players Grid (Main Area)
+            PlayersGridView(
+                players: viewModel.players,
+                isRevealed: false // Change to true when game state is .revealed
+            )
+            
+            // Card Selector (Bottom)
+            CardSelectorView(
+                selectedCard: $viewModel.selectedCard,
+                availableCards: viewModel.availableCards,
+                onSelect: viewModel.selectCard
+            )
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    // Leave room action
+                }) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .foregroundColor(.red)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    NavigationStack {
+        RoomView(roomNumber: "12345")
+    }
+}

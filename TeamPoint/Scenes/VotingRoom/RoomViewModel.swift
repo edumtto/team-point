@@ -1,11 +1,11 @@
 //
-//  VotingRoomViewModel.swift
+//  RoomViewModel.swift
 //  TeamPoint
 //
 //  Created by Eduardo Motta de Oliveira on 10/29/25.
 //
 
-protocol VotingRoomProtocol {
+protocol RoomProtocol {
     func startVoting()
     func vote(points: Int, username: String)
     func revealVotes()
@@ -13,7 +13,7 @@ protocol VotingRoomProtocol {
     var isHost: Bool { get }
 }
 
-enum VotingRoomState {
+enum RoomState {
     case waitingParticipants
     case voting
     case revealingVotes
