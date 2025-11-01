@@ -5,7 +5,7 @@
 //  Created by Eduardo Motta de Oliveira on 10/29/25.
 //
 import SwiftUI
-internal import Combine
+import Combine
 
 protocol HomeViewModelProtocol {
     func enterRoom(code: String, username: String)
@@ -24,3 +24,4 @@ enum HomeViewState {
 class HomeViewModel: ObservableObject {
     @Published var state: HomeViewState = .start
 }
+

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    let socketManager = SocketIOManager()
+    @EnvironmentObject var socketManager: SocketIOManager
     @State private var textInput: String = ""
     
     var body: some View {
@@ -20,7 +20,6 @@ struct HomeView: View {
             Button("Send") {
                 print("Sent")
                 socketManager.establishConnection()
-                socketManager.sendMessage(sender: "Edu", text: textInput)
             }
         }
         .padding()

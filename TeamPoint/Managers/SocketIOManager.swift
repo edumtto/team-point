@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import Combine
 import SocketIO
 
-private enum CustomSocketEvents: String {
+private enum CustomSocketEvent: String {
     case startVoting
     case vote
     case reveal
@@ -16,37 +17,41 @@ private enum CustomSocketEvents: String {
     var name: String { rawValue }
 }
 
-struct Message: Identifiable, Codable {
-    var id = UUID()
-    let sender: String
-    let text: String
-    var timestamp: Date = Date()
-
-    static let chatEvent = "chat message"
+struct Vote: Codable, SocketData {
+    let username: String
+    let points: Int
 }
 
 protocol SocketIOManagerProtocol {
-    func sendMessage(_ message: Message)
+    func establishConnection()
+    func closeConnection()
+    func joinChannel(_ channelName: String)
+    func vote(_ vote: Vote)
 }
 
-protocol SocketIOManagerDelegate: AnyObject {
+protocol SocketEventsDelegate: AnyObject {
+    func didEstablishConnection()
+    func didCloseConnection()
     func didStartVoting()
-    func didReceiveVote(points: Int, username: String)
+    func didReceiveVote(_ vote: Vote)
     func didReveal()
 }
 
-final class SocketIOManager {
-    static let shared = SocketIOManager()
-    private let serverURL = URL(string: "http://localhost:3000")!
-    private let manager: SocketManager
+enum Constants {
+    static let socketURL = URL(string: "http://localhost:3000")!
+}
+
+final class SocketIOManager: ObservableObject {
     private let socket: SocketIOClient
+    weak var delegate: SocketEventsDelegate?
+//    var onReceiveMessage: ((Message) -> Void)?
+    
+    var isConnected: Bool {
+        return socket.status == .connected
+    }
 
-    weak var delegate: SocketIOManagerDelegate?
-    var onReceiveMessage: ((Message) -> Void)?
-
-    init() {
-        manager = SocketManager(socketURL: serverURL, config: [.log(false), .compress])
-        socket = manager.defaultSocket
+    init(socket: SocketIOClient = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .compress]).defaultSocket) {
+        self.socket = socket
         setupSocketEvents()
     }
 
@@ -78,24 +83,39 @@ final class SocketIOManager {
 //        }
 
         // Custom application events
-        socket.on(Message.chatEvent) { [weak self] data, ack in
-            guard let self = self, let jsonArray = data.first as? [String: Any] else {
-                print("Received non-message data or data format error.")
-                return
+        socket.on(CustomSocketEvent.startVoting.name) { [weak self] data, ack in
+            if let self {
+                self.delegate?.didStartVoting()
             }
+        }
+        
+        socket.on(CustomSocketEvent.vote.name) { [weak self] data, ack in
+//            delegate?.didReceiveVote(<#T##vote: Vote##Vote#>)
+        }
+        
+        socket.on(CustomSocketEvent.reveal.name) { [weak self] data, ack in
+            if let self {
+                self.delegate?.didReveal()
+        }
+        
+        
+//            guard let self = self, let jsonArray = data.first as? [String: Any] else {
+//                print("Received non-message data or data format error.")
+//                return
+//            }
 
             // Simple example parsing: Expecting a dictionary with 'sender' and 'text'
-            if let sender = jsonArray["sender"] as? String,
-               let text = jsonArray["text"] as? String {
-
-                let newMessage = Message(sender: sender, text: text)
-                print("Received message from \(newMessage.sender): \(newMessage.text)")
-
-                // Call the handler closure in the ViewModel
-                self.onReceiveMessage?(newMessage)
-            } else {
-                print("Failed to parse incoming message data.")
-            }
+//            if let sender = jsonArray["sender"] as? String,
+//               let text = jsonArray["text"] as? String {
+//
+//                let newMessage = Message(sender: sender, text: text)
+//                print("Received message from \(newMessage.sender): \(newMessage.text)")
+//
+//                // Call the handler closure in the ViewModel
+//                self.onReceiveMessage?(newMessage)
+//            } else {
+//                print("Failed to parse incoming message data.")
+//            }
 
             // Example of sending an acknowledgement if required by the server
             // ack.with("Got it!")
@@ -105,30 +125,32 @@ final class SocketIOManager {
     /// Connects the socket.
     func establishConnection() {
         socket.connect()
+        delegate?.didEstablishConnection()
     }
 
     /// Disconnects the socket.
     func closeConnection() {
         socket.disconnect()
+        delegate?.didCloseConnection()
+    }
+    
+    func joinChannel(_ channelName: String) {
+        guard socket.status == .connected else {
+            print("Socket not connected. Cannot emit 'join'.")
+            return
+        }
+        
+        socket.emit("join", channelName)
+        print("Emitted 'join' event for channel: \(channelName)")
     }
 
-    /// Sends a message object to the server.
-    /// - Parameters:
-    ///   - sender: The name of the sender.
-    ///   - text: The content of the message.
-    func sendMessage(sender: String, text: String) {
-        let messageData: [String: Any] = [
-            "sender": sender,
-            "text": text
-        ]
-
-        // Emit the message data to the server under the predefined event name
-        socket.emit(Message.chatEvent, text)
-        print("Sent message: \(text) by \(sender)")
-    }
-
-    /// Checks if the socket is currently connected.
-    var isConnected: Bool {
-        return socket.status == .connected
+    func vote(_ vote: Vote) {
+        guard socket.status == .connected else {
+            print("Socket not connected. Cannot emit 'join'.")
+            return
+        }
+        
+        socket.emit("vote", vote)
     }
 }
+
