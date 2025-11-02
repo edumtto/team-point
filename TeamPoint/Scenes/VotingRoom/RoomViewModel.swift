@@ -6,51 +6,124 @@
 //
 
 import Combine
+import Foundation
 
 protocol RoomProtocol {
     func startVoting()
-    func vote(points: Int, username: String)
+    func vote(points: Int, playerName: String)
     func revealVotes()
     func restartVoting()
     var isHost: Bool { get }
 }
 
-enum RoomState {
-    case waitingParticipants
-    case voting
-    case revealingVotes
-}
-
 @MainActor
-class RoomViewModel: ObservableObject {
-    @Published var roomNumber: String
-    @Published var gameState: GameState = .voting(count: 2, total: 5)
-    @Published var players: [Player] = [
-        Player(name: "Alice", selectedCard: 5),
-        Player(name: "Bob", selectedCard: 8),
-        Player(name: "Charlie", selectedCard: nil),
-        Player(name: "Diana", selectedCard: 13),
-        Player(name: "Eve", selectedCard: nil)
-    ]
-    @Published var selectedCard: Int? = nil
+final class RoomViewModel: ObservableObject {
+    private var socketService: SocketServiceProtocol
+    static let availableCards: [Int] = [0, 1, 2, 3, 5, 8, 13, 20, 40, 100]
+    let roomNumber: String
+    let playerName: String
+    let playerId: String
+    let isHost: Bool
     
-    let availableCards: [Int] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
-    
-    init(roomNumber: String) {
-        self.roomNumber = roomNumber
+    private var playerData: GameData.Player {
+        .init(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
     }
     
-    func selectCard(_ card: Int) {
-        if selectedCard == card {
-            selectedCard = nil
-        } else {
-            selectedCard = card
+    @Published var roomState: State = .waitingForParticipants
+    
+    @Published var players: [Player] = []
+    
+    @Published var selectedCardIndex: Int? = nil
+    
+    init(roomNumber: String, playerName: String, isHost: Bool, socketService: SocketServiceProtocol) {
+        self.roomNumber = roomNumber
+        self.playerName = playerName
+        self.isHost = isHost
+        
+        self.playerId = UUID().uuidString
+        self.players = [Player(id: playerId, name: playerName)]
+        
+        self.socketService = socketService
+        self.socketService.delegate = self
+        
+        emitEnterRoom()
+    }
+    
+    func selectCard(_ cardIndex: Int) {
+        selectedCardIndex = selectedCardIndex == cardIndex ? nil : cardIndex
+        socketService.selectCard(player: playerData)
+    }
+    
+    private func emitEnterRoom() {
+        socketService.enterRoom(player: playerData)
+    }
+}
+
+extension RoomViewModel: SocketEventsDelegate {
+    func didUpdateGame(_ gameData: GameData) {
+        
+    }
+    
+    func didJoinRoom() {
+    }
+    
+    func didFail(error: SocketError) {
+    
+    }
+    
+    func didCloseConnection() {
+    }
+    
+    func didStartGame() {
+        
+    }
+    
+    func didEndGame() {
+        
+    }
+}
+
+extension RoomViewModel {
+    enum State {
+        case waitingForParticipants
+        case voting(count: Int, total: Int)
+        case waitingForHost
+        case revealed
+        
+        var description: String {
+            switch self {
+            case .waitingForParticipants:
+                return "Waiting for participants..."
+            case .voting(let count, let total):
+                return "\(count) of \(total) votes received"
+            case .waitingForHost:
+                return "Waiting for host..."
+            case .revealed:
+                return "Results revealed"
+            }
         }
     }
     
-    func submitVote() {
-        guard let card = selectedCard else { return }
-        print("Submitting vote: \(card)")
-        // Here you would send the vote to your backend
+    struct Player: Identifiable {
+        let id: String
+        let name: String
+        var selectedCardIndex: Int?
+        
+        var hasVoted: Bool {
+            selectedCardIndex != nil
+        }
+        
+        var cardValue: Int? {
+            if let index = selectedCardIndex {
+                return availableCards[index]
+            }
+            return nil
+        }
+        
+        init(id: String, name: String, selectedCardIndex: Int? = nil) {
+            self.id = id
+            self.name = name
+            self.selectedCardIndex = selectedCardIndex
+        }
     }
 }

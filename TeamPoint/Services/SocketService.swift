@@ -9,35 +9,39 @@ import SwiftUI
 import Combine
 import SocketIO
 
-private enum CustomSocketEvent: String {
-    case joinRoom
-    case startVoting
-    case vote
-    case reveal
+
+struct GameData: Decodable {
+    struct Player: Identifiable, Codable, SocketData {
+        let id: String
+        let name: String
+        let selectedCardIndex: Int // -1 represents no card selected
+        
+        init(id: String, name: String, selectedCardIndex: Int = -1) {
+            self.id = id
+            self.name = name
+            self.selectedCardIndex = selectedCardIndex
+        }
+        
+        func jsonData() -> [String: Any]? {
+            do {
+               let jsonData = try JSONEncoder().encode(self)
+                return try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any]
+           } catch {
+               print("Error encoding struct: \(error)")
+               return nil
+           }
+        }
     
-    var name: String { rawValue }
-}
-
-struct Vote: Codable, SocketData {
-    let username: String
-    let points: Int
-}
-
-protocol SocketServiceProtocol {
-    func establishConnection()
-    func closeConnection()
-    func joinChannel(_ channelName: String)
-    func vote(_ vote: Vote)
-    var delegate: SocketEventsDelegate? { get set }
-}
-
-protocol SocketEventsDelegate: AnyObject {
-    func didJoinRoom()
-    func didFail(error: SocketError)
-    func didCloseConnection()
-    func didStartVoting()
-    func didReceiveVote(_ vote: Vote)
-    func didReveal()
+    }
+    
+    enum State: Decodable {
+        case waiting
+        case started
+        case ended
+    }
+    
+    let players: [Player]
+    let state: State
 }
 
 enum SocketError: Error {
@@ -51,15 +55,50 @@ enum SocketError: Error {
     }
 }
 
-enum Constants {
+enum GlobalConstants {
     static let socketURL = URL(string: "http://localhost:3000")!
 }
 
+protocol SocketEventsDelegate: AnyObject {
+    func didJoinRoom()
+    func didFail(error: SocketError)
+    func didCloseConnection()
+    
+    func didUpdateGame(_ gameData: GameData)
+}
+
+protocol SocketServiceProtocol {
+    func establishConnection()
+    func joinChannel(_ channelName: String, retryConnecting: Bool)
+    func closeConnection()
+    
+    func startGame()
+    func enterRoom(player: GameData.Player)
+    func selectCard(player: GameData.Player)
+    func endGame()
+    
+    var delegate: SocketEventsDelegate? { get set }
+}
+
 final class SocketService: ObservableObject, SocketServiceProtocol {
+    static let shared = SocketService()
+    
+    private enum Event: String {
+        // Client -> Server
+        case enterRoom
+        case startGame
+        case selectCard
+        case endGame
+        
+        // Server -> Client
+        case updatedGame
+        
+        var name: String { rawValue }
+    }
+
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var delegate: SocketEventsDelegate?
-//    var onReceiveMessage: ((Message) -> Void)?
     
     var isConnected: Bool {
         return socket.status == .connected
@@ -67,7 +106,7 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
 
     //init(socket: SocketIOClient = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress]).defaultSocket) {
     init () {
-        self.manager = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress])
+        self.manager = SocketManager(socketURL: GlobalConstants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress])
         self.socket = manager.defaultSocket
         setupSocketEvents()
         establishConnection()
@@ -93,32 +132,14 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
         }
         
         // Custom application events
-        socket.on(CustomSocketEvent.joinRoom.name) { [weak self] data, ack in
-            if let self {
-                self.delegate?.didStartVoting()
-            }
-        }
-//        
-//        socket.on(CustomSocketEvent.startVoting.name) { [weak self] data, ack in
-//            if let self {
-//                self.delegate?.didStartVoting()
-//            }
-//        }
-//        
-//        socket.on(CustomSocketEvent.vote.name) { [weak self] data, ack in
-//            delegate?.didReceiveVote(<#T##vote: Vote##Vote#>)
-//        }
-//        
-//        socket.on(CustomSocketEvent.reveal.name) { [weak self] data, ack in
-//            if let self {
-//                self.delegate?.didReveal()
-//        }
-        
-        
-//            guard let self = self, let jsonArray = data.first as? [String: Any] else {
+//        socket.on(Event.updatedGame.name) { [weak self] data, ack in
+//            guard let self, let jsonArray = data.first as? [String: Any] else {
 //                print("Received non-message data or data format error.")
 //                return
 //            }
+//            self.delegate?.didUpdateGame(GameData(players: [], state: .waiting))
+//        }
+//
 
             // Simple example parsing: Expecting a dictionary with 'sender' and 'text'
 //            if let sender = jsonArray["sender"] as? String,
@@ -140,7 +161,9 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
 
     func establishConnection() {
         if socket.status != .connected {
-            socket.connect()
+            socket.connect(timeoutAfter: 2) { [weak self] in
+                self?.delegate?.didFail(error: .notConnected)
+            }
         }
     }
 
@@ -149,29 +172,67 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
         delegate?.didCloseConnection()
     }
     
-    func joinChannel(_ channelName: String) {
+    func joinChannel(_ channelName: String, retryConnecting: Bool = false) {
         guard socket.status == .connected else {
-            delegate?.didFail(error: .notConnected)
-            print("Socket not connected. Cannot emit 'join'.")
+            if retryConnecting {
+                socket.connect(timeoutAfter: 2) { [weak self] in
+                    self?.joinChannel(channelName)
+                }
+            } else {
+                delegate?.didFail(error: .notConnected)
+                print("Socket not connected. Cannot emit 'join'.")
+            }
+            
             return
         }
         
         socket.emit("join", channelName) { [weak self] in
-            if let self {
-                self.delegate?.didJoinRoom()
-            }
+            self?.delegate?.didJoinRoom()
         }
         print("Emitted 'join' event for channel: \(channelName)")
     }
-
-    func vote(_ vote: Vote) {
+    
+    func startGame() {
         guard socket.status == .connected else {
             delegate?.didFail(error: .notConnected)
-            print("Socket not connected. Cannot emit 'vote'.")
+            print("Socket not connected. Cannot emit 'enterRoom'.")
             return
         }
         
-        socket.emit("vote", vote)
+        socket.emit(Event.startGame.name)
+    }
+    
+    func endGame() {
+        socket.emit(Event.endGame.name)
+    }
+    
+    func enterRoom(player: GameData.Player) {
+        guard socket.status == .connected else {
+            delegate?.didFail(error: .notConnected)
+            print("Socket not connected. Cannot emit 'enterRoom'.")
+            return
+        }
+        
+        let data: [String: Any] = [
+            "playerId": player.id,
+            "playerName": player.name
+        ]
+        socket.emit(Event.enterRoom.name, data)
+    }
+
+    func selectCard(player: GameData.Player) {
+        guard socket.status == .connected else {
+            delegate?.didFail(error: .notConnected)
+            print("Socket not connected. Cannot emit 'SelectedCard'.")
+            return
+        }
+        
+        let data: [String: Any] = [
+            "playerId": player.id,
+            "cardId": player.selectedCardIndex
+        ]
+        
+        socket.emit(Event.selectCard.name, data)
     }
 }
 

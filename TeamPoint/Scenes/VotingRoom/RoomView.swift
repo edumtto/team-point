@@ -7,40 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Models
-struct Player: Identifiable {
-    let id = UUID()
-    let name: String
-    var selectedCard: Int?
-    var hasVoted: Bool {
-        selectedCard != nil
-    }
-}
-
-enum GameState {
-    case waitingForParticipants
-    case voting(count: Int, total: Int)
-    case waitingForHost
-    case revealed
-    
-    var description: String {
-        switch self {
-        case .waitingForParticipants:
-            return "Waiting for participants..."
-        case .voting(let count, let total):
-            return "\(count) of \(total) votes received"
-        case .waitingForHost:
-            return "Waiting for host..."
-        case .revealed:
-            return "Results revealed"
-        }
-    }
-}
-
 // MARK: - Reusable Components
 struct RoomHeaderView: View {
     let roomNumber: String
-    let gameState: GameState
+    let roomState: RoomViewModel.State
     
     var body: some View {
         VStack(spacing: AppTheme.Spacing.small) {
@@ -56,7 +26,7 @@ struct RoomHeaderView: View {
                     .foregroundColor(.blue)
             }
             
-            Text(gameState.description)
+            Text(roomState.description)
                 .font(.subheadline)
                 .foregroundColor(AppTheme.Colors.textSecondary)
         }
@@ -68,7 +38,7 @@ struct RoomHeaderView: View {
 }
 
 struct PlayerCardView: View {
-    let player: Player
+    let player: RoomViewModel.Player
     let isRevealed: Bool
     
     var body: some View {
@@ -78,19 +48,19 @@ struct PlayerCardView: View {
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                     .fill(player.hasVoted ?
                           LinearGradient(colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.8)],
-                                       startPoint: .topLeading,
-                                       endPoint: .bottomTrailing) :
-                          LinearGradient(colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
-                                       startPoint: .topLeading,
-                                       endPoint: .bottomTrailing))
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing) :
+                            LinearGradient(colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                           startPoint: .topLeading,
+                                           endPoint: .bottomTrailing))
                     .frame(width: 60, height: 90)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                             .stroke(player.hasVoted ? Color.white.opacity(0.5) : Color.gray.opacity(0.3), lineWidth: 2)
                     )
                 
-                if isRevealed, let card = player.selectedCard {
-                    Text("\(card)")
+                if isRevealed, let cardValue = player.cardValue {
+                    Text(String(cardValue))
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.white)
                 } else if player.hasVoted {
@@ -116,7 +86,7 @@ struct PlayerCardView: View {
 }
 
 struct PlayersGridView: View {
-    let players: [Player]
+    let players: [RoomViewModel.Player]
     let isRevealed: Bool
     
     let columns = [
@@ -146,17 +116,17 @@ struct SelectableCard: View {
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
                     .fill(isSelected ?
                           AppTheme.Colors.buttonGradient :
-                          LinearGradient(colors: [Color.white, Color.white],
-                                       startPoint: .top,
-                                       endPoint: .bottom))
+                            LinearGradient(colors: [Color.white, Color.white],
+                                           startPoint: .top,
+                                           endPoint: .bottom))
                     .frame(width: 70, height: 100)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
                             .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
                     )
                     .shadow(color: isSelected ? Color.blue.opacity(0.4) : AppTheme.Shadows.card,
-                           radius: isSelected ? 8 : 4,
-                           y: isSelected ? 4 : 2)
+                            radius: isSelected ? 8 : 4,
+                            y: isSelected ? 4 : 2)
                 
                 Text("\(value)")
                     .font(.system(size: 36, weight: .bold))
@@ -170,7 +140,7 @@ struct SelectableCard: View {
 }
 
 struct CardSelectorView: View {
-    @Binding var selectedCard: Int?
+    @Binding var selectedCardIndex: Int?
     let availableCards: [Int]
     let onSelect: (Int) -> Void
     
@@ -182,11 +152,11 @@ struct CardSelectorView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: AppTheme.Spacing.large) {
-                    ForEach(availableCards, id: \.self) { card in
+                    ForEach(availableCards.enumerated(), id: \.offset) { index, cardValue in
                         SelectableCard(
-                            value: card,
-                            isSelected: selectedCard == card,
-                            onTap: { onSelect(card) }
+                            value: cardValue,
+                            isSelected: selectedCardIndex == index,
+                            onTap: { onSelect(index) }
                         )
                     }
                 }
@@ -204,8 +174,16 @@ struct CardSelectorView: View {
 struct RoomView: View {
     @StateObject private var viewModel: RoomViewModel
     
-    init(roomNumber: String) {
-        _viewModel = StateObject(wrappedValue: RoomViewModel(roomNumber: roomNumber))
+    init(roomNumber: String, playerName: String, isHost: Bool) {
+        _viewModel = StateObject(
+            wrappedValue:
+                RoomViewModel(
+                    roomNumber: roomNumber,
+                    playerName: playerName,
+                    isHost: isHost,
+                    socketService: SocketService.shared
+                )
+        )
     }
     
     var body: some View {
@@ -213,7 +191,7 @@ struct RoomView: View {
             // Header
             RoomHeaderView(
                 roomNumber: viewModel.roomNumber,
-                gameState: viewModel.gameState
+                roomState: viewModel.roomState
             )
             
             // Players Grid (Main Area)
@@ -224,8 +202,8 @@ struct RoomView: View {
             
             // Card Selector (Bottom)
             CardSelectorView(
-                selectedCard: $viewModel.selectedCard,
-                availableCards: viewModel.availableCards,
+                selectedCardIndex: $viewModel.selectedCardIndex,
+                availableCards: RoomViewModel.availableCards,
                 onSelect: viewModel.selectCard
             )
         }
@@ -247,6 +225,6 @@ struct RoomView: View {
 // MARK: - Preview
 #Preview {
     NavigationStack {
-        RoomView(roomNumber: "12345")
+        RoomView(roomNumber: "12345", playerName: "James", isHost: true)
     }
 }

@@ -4,24 +4,17 @@
 //
 //  Created by Eduardo Motta de Oliveira on 10/29/25.
 //
+
 import SwiftUI
 import Combine
 
 protocol HomeViewModelProtocol {
-    func enterRoom(code: String, username: String)
-    func createRoom(username: String)
+    func enterRoom(code: String, playerName: String)
+    func createRoom(playerName: String)
     func updateRoomNumber(_ newValue: String)
 }
 
 // MARK: - Models
-
-
-//struct RoomInfo {
-//    let roomNumber: String?
-//    let userName: String
-//    let actionType: ActionType
-//}
-
 enum RoomError: Error, Identifiable {
     case joinFailed(message: String)
     var id: String {
@@ -45,6 +38,7 @@ enum HomeActionType {
 @MainActor
 class HomeViewModel: ObservableObject {
     private var socketService: SocketServiceProtocol
+    private let maxRoomNumberLength = 5
     
     @Published var roomNumber: String = ""
     @Published var userName: String = ""
@@ -54,7 +48,9 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var navigateToRoom = false
     
-    private let maxRoomNumberLength = 5
+    var isUserHost: Bool {
+        actionType == .create
+    }
     
     init(socketService: SocketServiceProtocol) {
         self.socketService = socketService
@@ -88,11 +84,11 @@ class HomeViewModel: ObservableObject {
         
         if actionType == .join {
             print("Trying to join room \(roomNumber)")
-            socketService.joinChannel(roomNumber)
+            socketService.joinChannel(roomNumber, retryConnecting: true)
         } else {
             let newRoomNumber = String(Int.random(in: 10000...99999))
             print("Trying to creat room \(roomNumber)")
-            socketService.joinChannel(newRoomNumber)
+            socketService.joinChannel(newRoomNumber, retryConnecting: true)
         }
     }
     
@@ -107,7 +103,7 @@ class HomeViewModel: ObservableObject {
     
     private func resetForm() {
         showNamePopup = false
-        userName = ""
+//        userName = ""
         errorMessage = nil
     }
     
@@ -125,6 +121,22 @@ class HomeViewModel: ObservableObject {
 }
 
 extension HomeViewModel: SocketEventsDelegate {
+    func didUpdateGame(_ gameData: GameData) {
+        
+    }
+    
+    func didCloseConnection() {
+        
+    }
+    
+    func didStartGame() {
+        
+    }
+    
+    func didEndGame() {
+        
+    }
+    
     func didFail(error: SocketError) {
         errorMessage = error.message
         isLoading = false
@@ -136,19 +148,4 @@ extension HomeViewModel: SocketEventsDelegate {
         resetForm()
     }
     
-    func didCloseConnection() {
-        
-    }
-    
-    func didStartVoting() {
-        
-    }
-    
-    func didReceiveVote(_ vote: Vote) {
-        
-    }
-    
-    func didReveal() {
-        
-    }
 }

@@ -156,8 +156,7 @@ struct LoadingView: View {
 }
 
 struct HomeView: View {
-    @EnvironmentObject var socketManager: SocketService
-    @StateObject private var viewModel = HomeViewModel(socketService: SocketService())
+    @StateObject private var viewModel = HomeViewModel(socketService: SocketService.shared)
     
     var body: some View {
         NavigationStack {
@@ -240,8 +239,9 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(isPresented: $viewModel.navigateToRoom) {
-                RoomView(roomNumber: viewModel.roomNumber)
+                RoomView(roomNumber: viewModel.roomNumber, playerName: viewModel.userName, isHost: viewModel.isUserHost)
             }
+            
             //            .alert(item: $viewModel.errorMessage) { error in
             //                    Alert(
             //                        title: Text("Join Error"),

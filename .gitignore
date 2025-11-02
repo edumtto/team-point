@@ -64,7 +64,7 @@ fastlane/test_output
 # ----------
 
 # Node.js dependencies
-/node_modules
+SocketIOServer/node_modules
 
 # npm debug logs
 npm-debug.log*
@@ -75,9 +75,9 @@ yarn-error.log
 .yarn-integrity
 
 # Build artifacts
-/dist
-/build
-/out
+SocketIOServer/dist
+SocketIOServer/build
+SocketIOServer/out
 
 # Environment variables
 .env
@@ -87,7 +87,7 @@ yarn-error.log
 .vscode/
 .idea/
 .DS_Store
-Thumbs.db
+SocketIOServer/Thumbs.db
 
 # Other common ignored files
 *.log
