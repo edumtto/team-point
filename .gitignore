@@ -60,3 +60,36 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# ----------
+
+# Node.js dependencies
+/node_modules
+
+# npm debug logs
+npm-debug.log*
+.npm/
+
+# Yarn files
+yarn-error.log
+.yarn-integrity
+
+# Build artifacts
+/dist
+/build
+/out
+
+# Environment variables
+.env
+.env.*.local
+
+# Editor and OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Other common ignored files
+*.log
+*.tmp
+
