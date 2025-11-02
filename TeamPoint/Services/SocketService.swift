@@ -44,10 +44,18 @@ struct GameData: Decodable {
     let state: State
 }
 
-enum SocketError: Error {
+enum SocketError: LocalizedError, Identifiable {
     case notConnected
     
-    var message: String {
+    // Provide a stable identifier per case so it can be used with `.alert(item:)`
+    var id: String {
+        switch self {
+        case .notConnected:
+            return "notConnected"
+        }
+    }
+    
+    var errorDescription: String? {
         switch self {
         case .notConnected:
             return "Error connecting. Check your internet connection."
@@ -236,4 +244,3 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
         socket.emit(Event.selectCard.name, data)
     }
 }
-

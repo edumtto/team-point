@@ -44,7 +44,7 @@ class HomeViewModel: ObservableObject {
     @Published var userName: String = ""
     @Published var showNamePopup = false
     @Published var actionType: HomeActionType?
-    @Published var errorMessage: String?
+    @Published var error: SocketError?
     @Published var isLoading = false
     @Published var navigateToRoom = false
     
@@ -76,7 +76,6 @@ class HomeViewModel: ObservableObject {
     func cancelNameEntry() {
         showNamePopup = false
         userName = ""
-        errorMessage = nil
     }
     
     func confirmAction() {
@@ -92,19 +91,9 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    private func showErrorMessage(_ message: String) {
-        errorMessage = message
-        
-        // Auto-dismiss error after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.errorMessage = nil
-        }
-    }
-    
     private func resetForm() {
         showNamePopup = false
 //        userName = ""
-        errorMessage = nil
     }
     
     var isJoinButtonEnabled: Bool {
@@ -138,7 +127,7 @@ extension HomeViewModel: SocketEventsDelegate {
     }
     
     func didFail(error: SocketError) {
-        errorMessage = error.message
+        self.error = error
         isLoading = false
     }
     

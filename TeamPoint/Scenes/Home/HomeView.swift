@@ -12,13 +12,7 @@ struct LogoView: View {
     var body: some View {
         VStack(spacing: AppTheme.Spacing.medium) {
             ZStack {
-                Circle()
-                    .fill(AppTheme.Colors.textWhite.opacity(0.2))
-                    .frame(width: 120, height: 120)
-                
-                Image(systemName: "chart.bar.doc.horizontal")
-                    .font(.system(size: 50))
-                    .foregroundColor(AppTheme.Colors.textWhite)
+                Image(.pokerCards)
             }
             
             Text("TeamPoint")
@@ -29,25 +23,6 @@ struct LogoView: View {
                 .font(.subheadline)
                 .foregroundColor(AppTheme.Colors.textWhite.opacity(0.9))
         }
-    }
-}
-
-struct ErrorBanner: View {
-    let message: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.white)
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(.white)
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(Color.red)
-        .cornerRadius(AppTheme.CornerRadius.small)
-        .shadow(radius: 5)
     }
 }
 
@@ -76,7 +51,7 @@ struct RoomInputSection: View {
                         .font(.headline)
                         .foregroundColor(AppTheme.Colors.textWhite)
                         .padding(.horizontal, AppTheme.Spacing.large)
-                        .padding(.vertical, AppTheme.Spacing.medium)
+                        .padding(.vertical)
                         .background(isEnabled ? Color.blue : Color.gray)
                         .cornerRadius(AppTheme.CornerRadius.small)
                 }
@@ -88,7 +63,6 @@ struct RoomInputSection: View {
 
 struct NamePopupView: View {
     @Binding var userName: String
-    @Binding var errorMessage: String?
     let title: String
     let isContinueEnabled: Bool
     let onCancel: () -> Void
@@ -106,11 +80,6 @@ struct NamePopupView: View {
             
             TextField("Your name", text: $userName)
                 .inputFieldStyle()
-            
-            if let error = errorMessage {
-                ErrorBanner(message: error)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
             
             HStack(spacing: AppTheme.Spacing.medium) {
                 Button(action: onCancel) {
@@ -229,7 +198,6 @@ struct HomeView: View {
                     
                     NamePopupView(
                         userName: $viewModel.userName,
-                        errorMessage: $viewModel.errorMessage,
                         title: viewModel.popupTitle,
                         isContinueEnabled: viewModel.isContinueButtonEnabled,
                         onCancel: viewModel.cancelNameEntry,
@@ -242,17 +210,17 @@ struct HomeView: View {
                 RoomView(roomNumber: viewModel.roomNumber, playerName: viewModel.userName, isHost: viewModel.isUserHost)
             }
             
-            //            .alert(item: $viewModel.errorMessage) { error in
-            //                    Alert(
-            //                        title: Text("Join Error"),
-            //                        message: Text(error.localizedDescription),
-            //                        dismissButton: .default(Text("OK"))
-            //                    )
-            //                }
-            //            }
+            .alert(item: $viewModel.error) { error in
+                    Alert(
+                        title: Text("Join Error"),
+                        message: Text(error.localizedDescription),
+                        dismissButton: .default(Text("OK"))
+                    )
+                }
+            }
             //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showNamePopup)
             //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showError)
-        }
+        
     }
 }
 
