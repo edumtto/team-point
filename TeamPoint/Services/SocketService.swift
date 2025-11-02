@@ -55,10 +55,6 @@ enum SocketError: Error {
     }
 }
 
-enum GlobalConstants {
-    static let socketURL = URL(string: "http://localhost:3000")!
-}
-
 protocol SocketEventsDelegate: AnyObject {
     func didJoinRoom()
     func didFail(error: SocketError)
@@ -173,7 +169,7 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
     }
     
     func joinChannel(_ channelName: String, retryConnecting: Bool = false) {
-        guard socket.status == .connected else {
+        guard isConnected else {
             if retryConnecting {
                 socket.connect(timeoutAfter: 2) { [weak self] in
                     self?.joinChannel(channelName)
@@ -193,7 +189,7 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
     }
     
     func startGame() {
-        guard socket.status == .connected else {
+        guard isConnected else {
             delegate?.didFail(error: .notConnected)
             print("Socket not connected. Cannot emit 'enterRoom'.")
             return
@@ -203,11 +199,16 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
     }
     
     func endGame() {
+        guard isConnected else {
+            delegate?.didFail(error: .notConnected)
+            print("Socket not connected. Cannot emit 'enterRoom'.")
+            return
+        }
         socket.emit(Event.endGame.name)
     }
     
     func enterRoom(player: GameData.Player) {
-        guard socket.status == .connected else {
+        guard isConnected else {
             delegate?.didFail(error: .notConnected)
             print("Socket not connected. Cannot emit 'enterRoom'.")
             return
@@ -221,7 +222,7 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
     }
 
     func selectCard(player: GameData.Player) {
-        guard socket.status == .connected else {
+        guard isConnected else {
             delegate?.didFail(error: .notConnected)
             print("Socket not connected. Cannot emit 'SelectedCard'.")
             return

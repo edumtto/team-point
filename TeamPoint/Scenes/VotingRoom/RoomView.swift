@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Reusable Components
 struct RoomHeaderView: View {
     let roomNumber: String
-    let roomState: RoomViewModel.State
+    let roomState: RoomModel.State
     
     var body: some View {
         VStack(spacing: AppTheme.Spacing.small) {
@@ -38,7 +38,7 @@ struct RoomHeaderView: View {
 }
 
 struct PlayerCardView: View {
-    let player: RoomViewModel.Player
+    let player: RoomModel.Player
     let isRevealed: Bool
     
     var body: some View {
@@ -86,7 +86,7 @@ struct PlayerCardView: View {
 }
 
 struct PlayersGridView: View {
-    let players: [RoomViewModel.Player]
+    let players: [RoomModel.Player]
     let isRevealed: Bool
     
     let columns = [
@@ -102,6 +102,36 @@ struct PlayersGridView: View {
             }
             .padding()
         }
+    }
+}
+
+struct HostControlButton: View {
+    @Binding var roomState: RoomModel.State
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: AppTheme.Spacing.medium) {
+                Image(systemName: roomState.hostButtonIcon)
+                    .font(.headline)
+                Text(roomState.hostButtonTitle)
+                    .font(.headline)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                LinearGradient(
+                    colors: [Color.green.opacity(0.8), Color.blue.opacity(0.8)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(AppTheme.CornerRadius.medium)
+            .shadow(color: AppTheme.Shadows.card, radius: 5, y: 2)
+        }
+        .padding(.horizontal, AppTheme.Spacing.large)
+        .padding(.vertical, AppTheme.Spacing.small)
     }
 }
 
@@ -200,25 +230,25 @@ struct RoomView: View {
                 isRevealed: false // Change to true when game state is .revealed
             )
             
+            // Host Control Button (Only visible to host)
+            if viewModel.isHost {
+                HostControlButton(
+                    roomState: $viewModel.roomState,
+                    onTap: viewModel.handleHostAction
+                )
+            }
+            
             // Card Selector (Bottom)
-            CardSelectorView(
-                selectedCardIndex: $viewModel.selectedCardIndex,
-                availableCards: RoomViewModel.availableCards,
-                onSelect: viewModel.selectCard
-            )
+            if viewModel.showCardSelector {
+                CardSelectorView(
+                    selectedCardIndex: $viewModel.selectedCardIndex,
+                    availableCards: GlobalConstants.availableCards,
+                    onSelect: viewModel.selectCard
+                )
+            }
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    // Leave room action
-                }) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .foregroundColor(.red)
-                }
-            }
-        }
     }
 }
 
