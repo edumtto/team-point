@@ -33,9 +33,9 @@ struct GameData: Decodable {
     }
     
     enum State: Decodable {
-        case waiting
-        case started
-        case ended
+        case lobby
+        case selecting
+        case finished
     }
     
     let players: [Player]

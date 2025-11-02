@@ -56,7 +56,7 @@ class HomeViewModel: ObservableObject {
     
     init(socketService: SocketServiceProtocol) {
         self.socketService = socketService
-        self.socketService.delegate = self
+        self.socketService.connectionDelegate = self
     }
     
     func updateRoomNumber(_ newValue: String) {
@@ -82,14 +82,17 @@ class HomeViewModel: ObservableObject {
     
     func confirmAction() {
         isLoading = true
-        
-        if actionType == .join {
-            socketService.joinRoom(roomNumber, playerId: playerId, playerName: playerName, retryConnecting: true)
-        } else {
-            // TODO: Consume an API to get a valid newRoomNumber
-            let newRoomNumber = String(Int.random(in: 10000...99999))
-            socketService.joinRoom(newRoomNumber, playerId: playerId, playerName: playerName, retryConnecting: true)
-        }
+        let room = actionType == .join ? roomNumber : getNewRoomNumber()
+        socketService.joinRoom(
+            roomNumber: room,
+            isNewRoom: actionType == .create,
+            playerId: playerId, playerName: playerName
+        )
+    }
+    
+    private func getNewRoomNumber() -> String {
+        // TODO: Consume an API to get a valid newRoomNumber
+        String(Int.random(in: 10000...99999))
     }
     
     private func resetForm() {
@@ -110,23 +113,7 @@ class HomeViewModel: ObservableObject {
     }
 }
 
-extension HomeViewModel: SocketEventsDelegate {
-    func didUpdateGame(_ gameData: GameData) {
-        
-    }
-    
-    func didCloseConnection() {
-        
-    }
-    
-    func didStartGame() {
-        
-    }
-    
-    func didEndGame() {
-        
-    }
-    
+extension HomeViewModel: SocketConnectionDelegate {
     func didFail(error: SocketError) {
         self.error = error
         isLoading = false

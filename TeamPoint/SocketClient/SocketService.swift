@@ -9,24 +9,27 @@ import SwiftUI
 import Combine
 import SocketIO
 
-protocol SocketEventsDelegate: AnyObject {
+
+protocol SocketConnectionDelegate: AnyObject {
     func didJoinRoom()
     func didFail(error: SocketError)
-    func didCloseConnection()
-    
+}
+
+protocol SocketGameDelegate: AnyObject {
+    func didFail(error: SocketError)
     func didUpdateGame(_ gameData: GameData)
 }
 
 protocol SocketServiceProtocol {
     func establishConnection()
-    func joinRoom(_ roomNumber: String, playerId: String, playerName: String, retryConnecting: Bool)
-    func closeConnection()
-
+    func joinRoom(roomNumber: String, isNewRoom: Bool, playerId: String, playerName: String)
+    
     func startGame()
     func selectCard(player: GameData.Player)
     func endGame()
     
-    var delegate: SocketEventsDelegate? { get set }
+    var connectionDelegate: SocketConnectionDelegate? { get set }
+    var gameDelegate: SocketGameDelegate? { get set }
 }
 
 final class SocketService: ObservableObject {
@@ -40,14 +43,15 @@ final class SocketService: ObservableObject {
         case endGame
         
         // Server -> Client
-        case updatedGame
+        case updateGame
         
         var name: String { rawValue }
     }
     
     private let manager: SocketManager
     private let socket: SocketIOClient
-    weak var delegate: SocketEventsDelegate?
+    weak var connectionDelegate: SocketConnectionDelegate?
+    weak var gameDelegate: SocketGameDelegate?
     
     var isConnected: Bool {
         return socket.status == .connected
@@ -56,13 +60,11 @@ final class SocketService: ObservableObject {
     init () {
         self.manager = SocketManager(socketURL: GlobalConstants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress])
         self.socket = manager.defaultSocket
-        setupSocketEvents()
+        setupEventListeners()
         establishConnection()
     }
     
-    /// Sets up all necessary Socket.IO event listeners.
-    private func setupSocketEvents() {
-        // Connection events
+    private func setupEventListeners() {
         socket.on(clientEvent: .connect) { data, ack in
             print("Socket connected!")
         }
@@ -79,15 +81,14 @@ final class SocketService: ObservableObject {
             }
         }
         
-        // Custom application events
-        //        socket.on(Event.updatedGame.name) { [weak self] data, ack in
-        //            guard let self, let jsonArray = data.first as? [String: Any] else {
-        //                print("Received non-message data or data format error.")
-        //                return
-        //            }
-        //            self.delegate?.didUpdateGame(GameData(players: [], state: .waiting))
-        //        }
-        //
+//        socket.on(Event.updateGame.name) { [weak self] data, ack in
+            //            guard let self, let jsonArray = data.first as? [String: Any] else {
+            //                print("Received non-message data or data format error.")
+            //                return
+            //            }
+            //            self.delegate?.didUpdateGame(GameData(players: [], state: .lobby))
+//        }
+        
         
         // Simple example parsing: Expecting a dictionary with 'sender' and 'text'
         //            if let sender = jsonArray["sender"] as? String,
@@ -119,44 +120,34 @@ extension SocketService: SocketServiceProtocol {
     func establishConnection() {
         if socket.status != .connected {
             socket.connect(timeoutAfter: 2) { [weak self] in
-                self?.delegate?.didFail(error: .notConnected)
+                self?.connectionDelegate?.didFail(error: .notConnected)
             }
         }
     }
-
-    func closeConnection() {
-        socket.disconnect()
-        delegate?.didCloseConnection()
-    }
     
-    func joinRoom(_ roomNumber: String, playerId: String, playerName: String, retryConnecting: Bool = false) {
+    func joinRoom(roomNumber: String, isNewRoom: Bool, playerId: String, playerName: String) {
         guard isConnected else {
-            if retryConnecting {
-                delegate?.didFail(error: .notConnected)
-                socket.connect()
-            } else {
-                delegate?.didFail(error: .notConnected)
-                logEmitError(.notConnected, eventName: Event.join.name)
-            }
-            
+            connectionDelegate?.didFail(error: .notConnected)
+            socket.connect()
             return
         }
         
-        let data = [
+        let data: [String : Any] = [
             "roomNumber": roomNumber,
+            "isNewRoom": isNewRoom,
             "playerId": playerId,
             "playerName": playerName
         ]
         
         socket.emit("join", data) { [weak self] in
-            self?.delegate?.didJoinRoom()
+            self?.connectionDelegate?.didJoinRoom()
         }
         print("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
     }
     
     func startGame() {
         guard isConnected else {
-            delegate?.didFail(error: .notConnected)
+            gameDelegate?.didFail(error: .notConnected)
             logEmitError(.notConnected, eventName: Event.startGame.name)
             return
         }
@@ -166,16 +157,16 @@ extension SocketService: SocketServiceProtocol {
     
     func endGame() {
         guard isConnected else {
-            delegate?.didFail(error: .notConnected)
+            gameDelegate?.didFail(error: .notConnected)
             logEmitError(.notConnected, eventName: Event.endGame.name)
             return
         }
         socket.emit(Event.endGame.name)
     }
-
+    
     func selectCard(player: GameData.Player) {
         guard isConnected else {
-            delegate?.didFail(error: .notConnected)
+            gameDelegate?.didFail(error: .notConnected)
             logEmitError(.notConnected, eventName: Event.selectCard.name)
             return
         }

@@ -4,36 +4,69 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
 
-const app = express();
-const server = createServer(app);
-const io = new Server(server);
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
+/**
+ * Represents the global state for the Planning Poker game.
+ * Key: roomNumber (String)
+ * Value: {
+ *    players: Array<{id: String, name: String, selectedCardIndex: Int | null}>,
+ *    state: 'lobby' | 'selecting' | 'finished'
+ * }
+ */
 const globalGameState = {};
 
 // Default card set for the game
-const POKER_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, '?', 'coffee'];
+const POKER_CARDS = [0, 1, 2, 3, 5, 8, 13, 20, 40, 100];
 
+// --- Server Setup ---
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "http://localhost:3000", // Allow connection from the same origin (for testing)
+        methods: ["GET", "POST"]
+    }
+});
+
+const PORT = 3000;
+
+const getRoomState = (roomCode) => {
+    // Return a deep copy to prevent external modification
+    return JSON.parse(JSON.stringify(globalGameState[roomNumber]));
+};
+
+// --- Socket.IO Event Handlers ---
 io.on('connection', (socket) => {
-    console.log('a user connected');
-    let room = null;
+    let room = null; // TODO: Remove line
+    console.log(`User connected: ${socket.id}`);
+    
+    // Helper to emit the current state to all in a room
+    const emitStateToRoom = (roomNumber) => {
+        const state = getRoomState(roomNumber);
+        io.to(roomNumber).emit('updateGame', state);
+        console.log(`[${roomCode}] State updated. Players: ${state.players.length}, State: ${state.state}`);
+    };
+    
+    /**
+    * Event: "join"
+    * Params: { roomCode: String }
+    * Action: User joins a specific room namespace.
+    */
+    socket.on('join', (data) => {
+        const roomNumber = data.roomNumber;
+        const isNewRoom = data.isNewRoom;
+        const playerId = data.playerId;
+        const playerName = data.playerName;
+        
+        const actionDescription = isNewRoom ? ' created and joined room ' : ' joined room: '
+        console.log(playerName + actionDescription + roomNumber);
+        socket.join(roomNumber);
+    });
     
     socket.on('leave', () => {
         if (room) {
             socket.leave(room);
             room = null;
         }
-    });
-    
-    socket.on('join', (data) => {
-        const roomNumber = data.roomNumber;
-        const playerId = data.playerId;
-        const playerName = data.playerName;
-        
-        console.log(playerName + ' joined room: ' + roomNumber);
-        room = roomNumber;
-        socket.join(roomNumber);
     });
     
     socket.on('disconnect', () => {
@@ -54,13 +87,11 @@ io.on('connection', (socket) => {
         //      io.to(room).emit('chat message', msg);
         //    }
     });
-    
-    
-
 });
 
-server.listen(3000, () => {
-    console.log('server running at http://localhost:3000');
+// --- Start Server ---
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Socket.IO server running at http://localhost:${PORT}`);
 });
 
 

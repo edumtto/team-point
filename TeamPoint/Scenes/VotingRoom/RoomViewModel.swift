@@ -44,7 +44,7 @@ final class RoomViewModel: ObservableObject {
         self.players = [RoomModel.Player(id: playerId, name: playerName)]
         
         self.socketService = socketService
-        self.socketService.delegate = self
+        self.socketService.gameDelegate = self
     }
     
     func handleHostAction() {
@@ -76,27 +76,13 @@ final class RoomViewModel: ObservableObject {
     }
 }
 
-extension RoomViewModel: SocketEventsDelegate {
-    func didUpdateGame(_ gameData: GameData) {
-        
-    }
-    
-    func didJoinRoom() {
-    }
-    
+extension RoomViewModel: SocketGameDelegate {
     func didFail(error: SocketError) {
-    
+        print("didFail delegate called")
     }
     
-    func didCloseConnection() {
-    }
-    
-    func didStartGame() {
-        
-    }
-    
-    func didEndGame() {
-        
+    func didUpdateGame(_ gameData: GameData) {
+        print("didUpdateGame delegate called")
     }
 }
 
