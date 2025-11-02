@@ -81,13 +81,21 @@ final class SocketService: ObservableObject {
             }
         }
         
-//        socket.on(Event.updateGame.name) { [weak self] data, ack in
-            //            guard let self, let jsonArray = data.first as? [String: Any] else {
-            //                print("Received non-message data or data format error.")
-            //                return
-            //            }
-            //            self.delegate?.didUpdateGame(GameData(players: [], state: .lobby))
-//        }
+        socket.on(Event.updateGame.name) { [weak self] data, ack in
+            guard let self, let payload = data.first as? [String: Any] else {
+                print("Error: 'join' event received but no valid payload found.")
+                return
+            }
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+                let decoder = JSONDecoder()
+                let decodedData = try decoder.decode(GameData.self, from: jsonData)
+                self.gameDelegate?.didUpdateGame(decodedData)
+            } catch {
+                print("❌ Decoding Error for 'updateGame' event: \(error)")
+            }
+        }
         
         
         // Simple example parsing: Expecting a dictionary with 'sender' and 'text'

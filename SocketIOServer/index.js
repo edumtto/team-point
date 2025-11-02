@@ -8,8 +8,8 @@ import { Server } from 'socket.io';
  * Represents the global state for the Planning Poker game.
  * Key: roomNumber (String)
  * Value: {
- *    players: Array<{id: String, name: String, selectedCardIndex: Int | null}>,
- *    state: 'lobby' | 'selecting' | 'finished'
+ *     players: Array<{id: String, name: String, selectedCardIndex: Int | null}>,
+ *     state: 'lobby' | 'selecting' | 'finished'
  * }
  */
 const globalGameState = {};
@@ -29,7 +29,7 @@ const io = new Server(httpServer, {
 
 const PORT = 3000;
 
-const getRoomState = (roomCode) => {
+const getRoomState = (roomNumber) => {
     // Return a deep copy to prevent external modification
     return JSON.parse(JSON.stringify(globalGameState[roomNumber]));
 };
@@ -43,23 +43,40 @@ io.on('connection', (socket) => {
     const emitStateToRoom = (roomNumber) => {
         const state = getRoomState(roomNumber);
         io.to(roomNumber).emit('updateGame', state);
-        console.log(`[${roomCode}] State updated. Players: ${state.players.length}, State: ${state.state}`);
+        console.log(`[${roomNumber}] State updated. Players: ${state.players.length}, State: ${state.state}`);
     };
     
     /**
     * Event: "join"
-    * Params: { roomCode: String }
+    * Params: {
+    *    roomNumber: String,
+    *    isNewRoom: Bool,
+    *    playerId: String,
+    *    playerName: String
+    *}
     * Action: User joins a specific room namespace.
     */
     socket.on('join', (data) => {
         const roomNumber = data.roomNumber;
-        const isNewRoom = data.isNewRoom;
+//        const isNewRoom = data.isNewRoom;
         const playerId = data.playerId;
         const playerName = data.playerName;
         
-        const actionDescription = isNewRoom ? ' created and joined room ' : ' joined room: '
-        console.log(playerName + actionDescription + roomNumber);
+        
+        
+        if (!globalGameState[roomNumber]) {
+            globalGameState[roomNumber] = {
+                players: [],
+                state: 'lobby'
+            };
+            console.log(`Created new room: ${roomNumber}`);
+        }
+        
         socket.join(roomNumber);
+        socket.data.roomNumber = roomNumber;
+        console.log(playerName + ' joined room: ' + roomNumber);
+        
+        socket.emit('updateGame', getRoomState(roomNumber));
     });
     
     socket.on('leave', () => {

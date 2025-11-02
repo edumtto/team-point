@@ -8,6 +8,7 @@
 import SocketIO
 import Foundation
 
+// Data transfer model
 struct GameData: Decodable {
     struct Player: Identifiable, Codable, SocketData {
         let id: String
@@ -19,23 +20,24 @@ struct GameData: Decodable {
             self.name = name
             self.selectedCardIndex = selectedCardIndex
         }
-        
-        func jsonData() -> [String: Any]? {
-            do {
-               let jsonData = try JSONEncoder().encode(self)
-                return try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any]
-           } catch {
-               print("Error encoding struct: \(error)")
-               return nil
-           }
-        }
-    
     }
     
-    enum State: Decodable {
+    enum State: String, Decodable {
         case lobby
         case selecting
         case finished
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let statusString = try? container.decode(String.self)
+            
+            switch statusString?.lowercased() {
+            case "lobby": self = .lobby
+            case "selecting": self = .selecting
+            case "finished": self = .finished
+            default: self = .lobby
+            }
+        }
     }
     
     let players: [Player]

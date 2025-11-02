@@ -28,7 +28,7 @@ final class RoomViewModel: ObservableObject {
         .init(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
     }
     
-    @Published var roomState: RoomModel.State = .waitingForParticipants
+    @Published var roomState: RoomModel.State = .lobby
     @Published var showCardSelector: Bool = false
     
     @Published var players: [RoomModel.Player] = []
@@ -49,10 +49,10 @@ final class RoomViewModel: ObservableObject {
     
     func handleHostAction() {
         switch roomState {
-        case .waitingForParticipants, .revealed:
+        case .lobby, .finished:
             startGame()
             showCardSelector = true
-        case .voting(_, _):
+        case .selecting(_, _):
             endGame()
             showCardSelector = false
         }
@@ -60,13 +60,13 @@ final class RoomViewModel: ObservableObject {
     
     private func startGame() {
         print("Starting game...")
-        roomState = .voting(count: 0, total: players.count)
+        roomState = .selecting(count: 0, total: players.count)
         socketService.startGame()
     }
     
     private func endGame() {
         print("Revealing cards...")
-        roomState = .revealed
+        roomState = .finished
         socketService.endGame()
     }
     
@@ -83,6 +83,7 @@ extension RoomViewModel: SocketGameDelegate {
     
     func didUpdateGame(_ gameData: GameData) {
         print("didUpdateGame delegate called")
+        print(gameData)
     }
 }
 

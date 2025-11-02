@@ -5,41 +5,43 @@
 //  Created by Eduardo Motta de Oliveira on 11/2/25.
 //
 
-enum RoomModel {
+// Presentation model
+@MainActor
+struct RoomModel {
     enum State: Equatable {
-        case waitingForParticipants
-        case voting(count: Int, total: Int)
-        case revealed
+        case lobby
+        case selecting(count: Int, total: Int)
+        case finished
         
         var description: String {
             switch self {
-            case .waitingForParticipants:
+            case .lobby:
                 return "Waiting for participants..."
-            case .voting(let count, let total):
+            case .selecting(let count, let total):
                 return "\(count) of \(total) votes received"
-            case .revealed:
+            case .finished:
                 return "Results revealed"
             }
         }
         
         var hostButtonTitle: String {
             switch self {
-            case .waitingForParticipants:
+            case .lobby:
                 return "Start Game"
-            case .voting:
+            case .selecting:
                 return "Reveal Cards"
-            case .revealed:
+            case .finished:
                 return "New Round"
             }
         }
-            
+        
         var hostButtonIcon: String {
             switch self {
-            case .waitingForParticipants:
+            case .lobby:
                 return "play.fill"
-            case .voting:
+            case .selecting:
                 return "eye.fill"
-            case .revealed:
+            case .finished:
                 return "arrow.clockwise"
             }
         }
@@ -65,6 +67,31 @@ enum RoomModel {
             self.id = id
             self.name = name
             self.selectedCardIndex = selectedCardIndex
+        }
+        
+        init (_ player: GameData.Player) {
+            self.id = player.id
+            self.name = player.name
+            self.selectedCardIndex = player.selectedCardIndex == -1 ? nil : player.selectedCardIndex
+        }
+    }
+    
+    let players: [Player]
+    let state: State
+    
+    init(gameData: GameData) {
+        let mappedPlayers = gameData.players.map(Player.init).sorted { $0.name < $1.name }
+        self.players = mappedPlayers
+        
+        switch gameData.state {
+        case .lobby:
+            self.state = .lobby
+        case .finished:
+            self.state = .finished
+        case .selecting:
+            let totalPlayers = mappedPlayers.count
+            let playersWhoSelected = mappedPlayers.filter { $0.selectedCardIndex != nil }.count
+            self.state = .selecting(count: playersWhoSelected, total: totalPlayers)
         }
     }
 }

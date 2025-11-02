@@ -60,9 +60,9 @@ struct PlayerCardView: View {
                     )
                 
                 switch roomState {
-                case .waitingForParticipants:
+                case .lobby:
                     Text("")
-                case .voting(_, _):
+                case .selecting(_, _):
                     if player.hasVoted {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.title)
@@ -72,15 +72,15 @@ struct PlayerCardView: View {
                             .font(.title3)
                             .foregroundColor(.gray)
                     }
-                case .revealed:
+                case .finished:
                     if let cardValue = player.cardValue {
                         Text(String(cardValue))
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(.white)
                     } else {
                         Image(systemName: "xmark")
-                            .font(.title)
-                            .foregroundColor(.white)
+                            .font(.default)
+                            .foregroundColor(.gray)
                     }
                 }
             }
