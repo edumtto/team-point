@@ -10,6 +10,7 @@ import Combine
 import SocketIO
 
 private enum CustomSocketEvent: String {
+    case joinRoom
     case startVoting
     case vote
     case reveal
@@ -27,14 +28,27 @@ protocol SocketServiceProtocol {
     func closeConnection()
     func joinChannel(_ channelName: String)
     func vote(_ vote: Vote)
+    var delegate: SocketEventsDelegate? { get set }
 }
 
 protocol SocketEventsDelegate: AnyObject {
-    func didEstablishConnection()
+    func didJoinRoom()
+    func didFail(error: SocketError)
     func didCloseConnection()
     func didStartVoting()
     func didReceiveVote(_ vote: Vote)
     func didReveal()
+}
+
+enum SocketError: Error {
+    case notConnected
+    
+    var message: String {
+        switch self {
+        case .notConnected:
+            return "Error connecting. Check your internet connection."
+        }
+    }
 }
 
 enum Constants {
@@ -42,6 +56,7 @@ enum Constants {
 }
 
 final class SocketService: ObservableObject, SocketServiceProtocol {
+    private let manager: SocketManager
     private let socket: SocketIOClient
     weak var delegate: SocketEventsDelegate?
 //    var onReceiveMessage: ((Message) -> Void)?
@@ -50,9 +65,12 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
         return socket.status == .connected
     }
 
-    init(socket: SocketIOClient = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .compress]).defaultSocket) {
-        self.socket = socket
+    //init(socket: SocketIOClient = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress]).defaultSocket) {
+    init () {
+        self.manager = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress])
+        self.socket = manager.defaultSocket
         setupSocketEvents()
+        establishConnection()
     }
 
     /// Sets up all necessary Socket.IO event listeners.
@@ -74,29 +92,27 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
             }
         }
         
-//        socket.on("connect_error") { data, ack in
-//            if let error = data.first as? String {
-//                print("Connection error: \(error)")
-//            } else {
-//                print("Connection error: \(data)")
-//            }
-//        }
-
         // Custom application events
-        socket.on(CustomSocketEvent.startVoting.name) { [weak self] data, ack in
+        socket.on(CustomSocketEvent.joinRoom.name) { [weak self] data, ack in
             if let self {
                 self.delegate?.didStartVoting()
             }
         }
-        
-        socket.on(CustomSocketEvent.vote.name) { [weak self] data, ack in
+//        
+//        socket.on(CustomSocketEvent.startVoting.name) { [weak self] data, ack in
+//            if let self {
+//                self.delegate?.didStartVoting()
+//            }
+//        }
+//        
+//        socket.on(CustomSocketEvent.vote.name) { [weak self] data, ack in
 //            delegate?.didReceiveVote(<#T##vote: Vote##Vote#>)
-        }
-        
-        socket.on(CustomSocketEvent.reveal.name) { [weak self] data, ack in
-            if let self {
-                self.delegate?.didReveal()
-        }
+//        }
+//        
+//        socket.on(CustomSocketEvent.reveal.name) { [weak self] data, ack in
+//            if let self {
+//                self.delegate?.didReveal()
+//        }
         
         
 //            guard let self = self, let jsonArray = data.first as? [String: Any] else {
@@ -119,16 +135,15 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
 
             // Example of sending an acknowledgement if required by the server
             // ack.with("Got it!")
+//        }
+    }
+
+    func establishConnection() {
+        if socket.status != .connected {
+            socket.connect()
         }
     }
 
-    /// Connects the socket.
-    func establishConnection() {
-        socket.connect()
-        delegate?.didEstablishConnection()
-    }
-
-    /// Disconnects the socket.
     func closeConnection() {
         socket.disconnect()
         delegate?.didCloseConnection()
@@ -136,17 +151,23 @@ final class SocketService: ObservableObject, SocketServiceProtocol {
     
     func joinChannel(_ channelName: String) {
         guard socket.status == .connected else {
+            delegate?.didFail(error: .notConnected)
             print("Socket not connected. Cannot emit 'join'.")
             return
         }
         
-        socket.emit("join", channelName)
+        socket.emit("join", channelName) { [weak self] in
+            if let self {
+                self.delegate?.didJoinRoom()
+            }
+        }
         print("Emitted 'join' event for channel: \(channelName)")
     }
 
     func vote(_ vote: Vote) {
         guard socket.status == .connected else {
-            print("Socket not connected. Cannot emit 'join'.")
+            delegate?.didFail(error: .notConnected)
+            print("Socket not connected. Cannot emit 'vote'.")
             return
         }
         

@@ -7,10 +7,10 @@
 
 import SwiftUI
 
+private let socketManager = SocketService()
+
 @main
 struct TeamPointApp: App {
-    private let socketManager = SocketService()
-    
     var body: some Scene {
         WindowGroup {
             HomeView()

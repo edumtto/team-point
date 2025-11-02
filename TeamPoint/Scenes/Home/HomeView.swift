@@ -64,7 +64,7 @@ struct RoomInputSection: View {
                 .foregroundColor(AppTheme.Colors.textSecondary)
             
             HStack {
-                TextField("Enter 5-digit room code", text: $roomNumber)
+                TextField("Enter room code", text: $roomNumber)
                     .keyboardType(.numberPad)
                     .inputFieldStyle()
                     .onChange(of: roomNumber) { oldValue, newValue in
@@ -89,7 +89,6 @@ struct RoomInputSection: View {
 struct NamePopupView: View {
     @Binding var userName: String
     @Binding var errorMessage: String?
-    @Binding var showError: Bool
     let title: String
     let isContinueEnabled: Bool
     let onCancel: () -> Void
@@ -108,7 +107,7 @@ struct NamePopupView: View {
             TextField("Your name", text: $userName)
                 .inputFieldStyle()
             
-            if showError, let error = errorMessage {
+            if let error = errorMessage {
                 ErrorBanner(message: error)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -122,7 +121,6 @@ struct NamePopupView: View {
                 Button(action: onContinue) {
                     Text("Continue")
                 }
-                
                 .buttonStyle(PrimaryButtonStyle(isEnabled: isContinueEnabled))
                 .disabled(!isContinueEnabled)
             }
@@ -132,6 +130,28 @@ struct NamePopupView: View {
         .cornerRadius(AppTheme.CornerRadius.large)
         .shadow(color: AppTheme.Shadows.popup, radius: 20)
         .padding(.horizontal, AppTheme.Spacing.xxlarge)
+    }
+}
+
+struct LoadingView: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4) // Semi-transparent background
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5) // Make the spinner larger
+                
+                Text("Loading...")
+                    .foregroundColor(.white)
+                    .padding(.top, 10)
+            }
+            .padding(20)
+            .background(Color.gray.opacity(0.8))
+            .cornerRadius(15)
+        }
     }
 }
 
@@ -159,7 +179,7 @@ struct HomeView: View {
                         // Room number input
                         RoomInputSection(
                             roomNumber: $viewModel.roomNumber,
-                            onJoin: viewModel.validateAndJoinRoom,
+                            onJoin: viewModel.startJoinRoom,
                             isEnabled: viewModel.isJoinButtonEnabled,
                             onRoomNumberChange: viewModel.updateRoomNumber
                         )
@@ -198,8 +218,10 @@ struct HomeView: View {
                     Spacer()
                 }
                 
-                // Name popup overlay
-                if viewModel.showNamePopup {
+                // Popup overlay
+                if viewModel.isLoading {
+                    LoadingView()
+                } else if viewModel.showNamePopup {
                     AppTheme.Colors.overlayBackground
                         .ignoresSafeArea()
                         .onTapGesture {
@@ -209,7 +231,6 @@ struct HomeView: View {
                     NamePopupView(
                         userName: $viewModel.userName,
                         errorMessage: $viewModel.errorMessage,
-                        showError: $viewModel.showError,
                         title: viewModel.popupTitle,
                         isContinueEnabled: viewModel.isContinueButtonEnabled,
                         onCancel: viewModel.cancelNameEntry,
@@ -218,8 +239,19 @@ struct HomeView: View {
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-//            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showNamePopup)
-//            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showError)
+            .navigationDestination(isPresented: $viewModel.navigateToRoom) {
+                RoomView(roomNumber: viewModel.roomNumber)
+            }
+            //            .alert(item: $viewModel.errorMessage) { error in
+            //                    Alert(
+            //                        title: Text("Join Error"),
+            //                        message: Text(error.localizedDescription),
+            //                        dismissButton: .default(Text("OK"))
+            //                    )
+            //                }
+            //            }
+            //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showNamePopup)
+            //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showError)
         }
     }
 }

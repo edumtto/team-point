@@ -14,9 +14,7 @@ protocol HomeViewModelProtocol {
 }
 
 // MARK: - Models
-enum ActionType {
-    case join, create
-}
+
 
 //struct RoomInfo {
 //    let roomNumber: String?
@@ -24,27 +22,43 @@ enum ActionType {
 //    let actionType: ActionType
 //}
 
+enum RoomError: Error, Identifiable {
+    case joinFailed(message: String)
+    var id: String {
+        switch self {
+        case .joinFailed(let message):
+            return message
+        }
+    }
+    var localizedDescription: String {
+        switch self {
+        case .joinFailed(let message):
+            return "Failed to join room: \(message)"
+        }
+    }
+}
 
+enum HomeActionType {
+    case join, create
+}
+
+@MainActor
 class HomeViewModel: ObservableObject {
-    private let socketService: SocketServiceProtocol
+    private var socketService: SocketServiceProtocol
     
     @Published var roomNumber: String = ""
     @Published var userName: String = ""
     @Published var showNamePopup = false
-    @Published var actionType: ActionType?
+    @Published var actionType: HomeActionType?
     @Published var errorMessage: String?
-    @Published var showError = false
+    @Published var isLoading = false
     @Published var navigateToRoom = false
     
     private let maxRoomNumberLength = 5
     
     init(socketService: SocketServiceProtocol) {
         self.socketService = socketService
-        stabilishSocketConnection()
-    }
-    
-    private func stabilishSocketConnection() {
-        socketService.establishConnection()
+        self.socketService.delegate = self
     }
     
     func updateRoomNumber(_ newValue: String) {
@@ -53,11 +67,7 @@ class HomeViewModel: ObservableObject {
         roomNumber = String(filtered.prefix(maxRoomNumberLength))
     }
     
-    func validateAndJoinRoom() {
-        guard roomNumber.count == maxRoomNumberLength else {
-            showErrorMessage("Please enter a valid 5-digit room code")
-            return
-        }
+    func startJoinRoom() {
         actionType = .join
         showNamePopup = true
     }
@@ -74,36 +84,24 @@ class HomeViewModel: ObservableObject {
     }
     
     func confirmAction() {
-        let trimmedName = userName.trimmingCharacters(in: .whitespaces)
+        isLoading = true
         
-        guard !trimmedName.isEmpty else {
-            showErrorMessage("Please enter your name")
-            return
-        }
-        
-        guard trimmedName.count >= 2 else {
-            showErrorMessage("Name must be at least 2 characters")
-            return
-        }
-        
-        // Success - proceed with action
         if actionType == .join {
-            print("Joining room \(roomNumber) as \(trimmedName)")
+            print("Trying to join room \(roomNumber)")
+            socketService.joinChannel(roomNumber)
         } else {
-            print("Creating room as \(trimmedName)")
+            let newRoomNumber = String(Int.random(in: 10000...99999))
+            print("Trying to creat room \(roomNumber)")
+            socketService.joinChannel(newRoomNumber)
         }
-        
-        navigateToRoom = true
-        resetForm()
     }
     
     private func showErrorMessage(_ message: String) {
         errorMessage = message
-        showError = true
         
         // Auto-dismiss error after 3 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.showError = false
+            self?.errorMessage = nil
         }
     }
     
@@ -126,3 +124,31 @@ class HomeViewModel: ObservableObject {
     }
 }
 
+extension HomeViewModel: SocketEventsDelegate {
+    func didFail(error: SocketError) {
+        errorMessage = error.message
+        isLoading = false
+    }
+    
+    func didJoinRoom() {
+        isLoading = false
+        navigateToRoom = true
+        resetForm()
+    }
+    
+    func didCloseConnection() {
+        
+    }
+    
+    func didStartVoting() {
+        
+    }
+    
+    func didReceiveVote(_ vote: Vote) {
+        
+    }
+    
+    func didReveal() {
+        
+    }
+}
