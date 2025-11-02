@@ -62,7 +62,7 @@ struct RoomInputSection: View {
 }
 
 struct NamePopupView: View {
-    @Binding var userName: String
+    @Binding var playerName: String
     let title: String
     let isContinueEnabled: Bool
     let onCancel: () -> Void
@@ -78,7 +78,7 @@ struct NamePopupView: View {
                 .font(.subheadline)
                 .foregroundColor(AppTheme.Colors.textSecondary)
             
-            TextField("Your name", text: $userName)
+            TextField("Your name", text: $playerName)
                 .inputFieldStyle()
             
             HStack(spacing: AppTheme.Spacing.medium) {
@@ -197,7 +197,7 @@ struct HomeView: View {
                         }
                     
                     NamePopupView(
-                        userName: $viewModel.userName,
+                        playerName: $viewModel.playerName,
                         title: viewModel.popupTitle,
                         isContinueEnabled: viewModel.isContinueButtonEnabled,
                         onCancel: viewModel.cancelNameEntry,
@@ -207,7 +207,7 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(isPresented: $viewModel.navigateToRoom) {
-                RoomView(roomNumber: viewModel.roomNumber, playerName: viewModel.userName, isHost: viewModel.isUserHost)
+                RoomView(roomNumber: viewModel.roomNumber, playerName: viewModel.playerName, isHost: viewModel.isUserHost)
             }
             
             .alert(item: $viewModel.error) { error in

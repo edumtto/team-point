@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 protocol HomeViewModelProtocol {
-    func enterRoom(code: String, playerName: String)
+    func joinRoom(code: String, playerName: String)
     func createRoom(playerName: String)
     func updateRoomNumber(_ newValue: String)
 }
@@ -41,7 +41,9 @@ class HomeViewModel: ObservableObject {
     private let maxRoomNumberLength = 5
     
     @Published var roomNumber: String = ""
-    @Published var userName: String = ""
+    @Published var playerName: String = ""
+    @Published var playerId: String = UUID().uuidString
+    
     @Published var showNamePopup = false
     @Published var actionType: HomeActionType?
     @Published var error: SocketError?
@@ -75,25 +77,24 @@ class HomeViewModel: ObservableObject {
     
     func cancelNameEntry() {
         showNamePopup = false
-        userName = ""
+        playerName = ""
     }
     
     func confirmAction() {
         isLoading = true
         
         if actionType == .join {
-            print("Trying to join room \(roomNumber)")
-            socketService.joinChannel(roomNumber, retryConnecting: true)
+            socketService.joinRoom(roomNumber, playerId: playerId, playerName: playerName, retryConnecting: true)
         } else {
+            // TODO: Consume an API to get a valid newRoomNumber
             let newRoomNumber = String(Int.random(in: 10000...99999))
-            print("Trying to creat room \(roomNumber)")
-            socketService.joinChannel(newRoomNumber, retryConnecting: true)
+            socketService.joinRoom(newRoomNumber, playerId: playerId, playerName: playerName, retryConnecting: true)
         }
     }
     
     private func resetForm() {
         showNamePopup = false
-//        userName = ""
+//        playerName = ""
     }
     
     var isJoinButtonEnabled: Bool {
@@ -101,7 +102,7 @@ class HomeViewModel: ObservableObject {
     }
     
     var isContinueButtonEnabled: Bool {
-        !userName.trimmingCharacters(in: .whitespaces).isEmpty
+        !playerName.trimmingCharacters(in: .whitespaces).isEmpty
     }
     
     var popupTitle: String {

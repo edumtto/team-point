@@ -45,12 +45,6 @@ final class RoomViewModel: ObservableObject {
         
         self.socketService = socketService
         self.socketService.delegate = self
-        
-        emitEnterRoom()
-    }
-    
-    private func emitEnterRoom() {
-        socketService.enterRoom(player: playerData)
     }
     
     func handleHostAction() {
@@ -67,11 +61,13 @@ final class RoomViewModel: ObservableObject {
     private func startGame() {
         print("Starting game...")
         roomState = .voting(count: 0, total: players.count)
+        socketService.startGame()
     }
     
     private func endGame() {
         print("Revealing cards...")
         roomState = .revealed
+        socketService.endGame()
     }
     
     func selectCard(_ cardIndex: Int) {

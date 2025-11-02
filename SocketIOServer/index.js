@@ -10,12 +10,7 @@ const io = new Server(server);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-//app.get('/', (req, res) => {
-//    res.sendFile(join(__dirname, 'index.html'));
-//});
-
-const globalGameState = {
-};
+const globalGameState = {};
 
 // Default card set for the game
 const POKER_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, '?', 'coffee'];
@@ -31,19 +26,21 @@ io.on('connection', (socket) => {
         }
     });
     
-    socket.on('join', (roomCode) => {
-        console.log('a user joined room: ' + roomCode);
-        room = roomCode;
-        socket.join(roomCode);
-    });
-    
-    
-    socket.on('enterRoom', (data) => {
+    socket.on('join', (data) => {
+        const roomNumber = data.roomNumber;
         const playerId = data.playerId;
         const playerName = data.playerName;
         
-        console.log(`Player ID: ${playerId}`);
-        console.log(`Player name: ${playerName}`);
+        console.log(playerName + ' joined room: ' + roomNumber);
+        room = roomNumber;
+        socket.join(roomNumber);
+    });
+    
+    socket.on('disconnect', () => {
+        if (room) {
+            socket.leave(room);
+        }
+        console.log('user disconnected');
     });
     
     socket.on('selectCard', (data) => {
@@ -58,12 +55,8 @@ io.on('connection', (socket) => {
         //    }
     });
     
-    socket.on('disconnect', () => {
-        if (room) {
-            socket.leave(room);
-        }
-        console.log('user disconnected');
-    });
+    
+
 });
 
 server.listen(3000, () => {
