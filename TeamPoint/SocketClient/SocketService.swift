@@ -53,7 +53,6 @@ final class SocketService: ObservableObject {
         return socket.status == .connected
     }
     
-    //init(socket: SocketIOClient = SocketManager(socketURL: Constants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress]).defaultSocket) {
     init () {
         self.manager = SocketManager(socketURL: GlobalConstants.socketURL, config: [.log(false), .reconnectAttempts(3), .reconnectWait(1), .compress])
         self.socket = manager.defaultSocket
@@ -133,9 +132,8 @@ extension SocketService: SocketServiceProtocol {
     func joinRoom(_ roomNumber: String, playerId: String, playerName: String, retryConnecting: Bool = false) {
         guard isConnected else {
             if retryConnecting {
-                socket.connect(timeoutAfter: 2) { [weak self] in
-                    self?.joinRoom(roomNumber, playerId: playerId, playerName: playerName)
-                }
+                delegate?.didFail(error: .notConnected)
+                socket.connect()
             } else {
                 delegate?.didFail(error: .notConnected)
                 logEmitError(.notConnected, eventName: Event.join.name)
