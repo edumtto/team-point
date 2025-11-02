@@ -39,7 +39,7 @@ struct RoomHeaderView: View {
 
 struct PlayerCardView: View {
     let player: RoomModel.Player
-    let isRevealed: Bool
+    @Binding var roomState: RoomModel.State
     
     var body: some View {
         VStack(spacing: AppTheme.Spacing.small) {
@@ -59,18 +59,29 @@ struct PlayerCardView: View {
                             .stroke(player.hasVoted ? Color.white.opacity(0.5) : Color.gray.opacity(0.3), lineWidth: 2)
                     )
                 
-                if isRevealed, let cardValue = player.cardValue {
-                    Text(String(cardValue))
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                } else if player.hasVoted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title)
-                        .foregroundColor(.white)
-                } else {
-                    Image(systemName: "hourglass")
-                        .font(.title3)
-                        .foregroundColor(.gray)
+                switch roomState {
+                case .waitingForParticipants:
+                    Text("")
+                case .voting(_, _):
+                    if player.hasVoted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title)
+                            .foregroundColor(.white)
+                    } else {
+                        Image(systemName: "hourglass")
+                            .font(.title3)
+                            .foregroundColor(.gray)
+                    }
+                case .revealed:
+                    if let cardValue = player.cardValue {
+                        Text(String(cardValue))
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                    } else {
+                        Image(systemName: "xmark")
+                            .font(.title)
+                            .foregroundColor(.white)
+                    }
                 }
             }
             
@@ -87,7 +98,7 @@ struct PlayerCardView: View {
 
 struct PlayersGridView: View {
     let players: [RoomModel.Player]
-    let isRevealed: Bool
+    @Binding var roomState: RoomModel.State
     
     let columns = [
         GridItem(.adaptive(minimum: 80), spacing: AppTheme.Spacing.large)
@@ -97,7 +108,7 @@ struct PlayersGridView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: AppTheme.Spacing.large) {
                 ForEach(players) { player in
-                    PlayerCardView(player: player, isRevealed: isRevealed)
+                    PlayerCardView(player: player, roomState: $roomState)
                 }
             }
             .padding()
@@ -122,7 +133,7 @@ struct HostControlButton: View {
             .padding()
             .background(
                 LinearGradient(
-                    colors: [Color.green.opacity(0.8), Color.blue.opacity(0.8)],
+                    colors: [Color.teal.opacity(0.8), Color.blue.opacity(0.8)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -227,7 +238,7 @@ struct RoomView: View {
             // Players Grid (Main Area)
             PlayersGridView(
                 players: viewModel.players,
-                isRevealed: false // Change to true when game state is .revealed
+                roomState: $viewModel.roomState
             )
             
             // Host Control Button (Only visible to host)
