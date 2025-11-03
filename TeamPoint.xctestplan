@@ -1,0 +1,37 @@
+{
+  "configurations" : [
+    {
+      "id" : "281B06C4-6E2D-45F8-8C7B-EA5FC7786BEF",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:TeamPoint.xcodeproj",
+      "identifier" : "3489FD922EB27E4A00D78C88",
+      "name" : "TeamPoint"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:TeamPoint.xcodeproj",
+        "identifier" : "3489FD9F2EB27E4C00D78C88",
+        "name" : "TeamPointTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:TeamPoint.xcodeproj",
+        "identifier" : "3489FDA92EB27E4C00D78C88",
+        "name" : "TeamPointUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

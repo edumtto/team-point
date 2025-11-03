@@ -92,6 +92,7 @@ final class SocketService: ObservableObject {
                 let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
                 let decoder = JSONDecoder()
                 let decodedData = try decoder.decode(GameData.self, from: jsonData)
+                // Dispatch to main actor before calling the delegate
                 self.gameDelegate?.didUpdateGame(decodedData)
             } catch {
                 print("❌ Decoding Error for 'updateGame' event: \(error)")

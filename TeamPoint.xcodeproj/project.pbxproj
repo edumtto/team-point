@@ -29,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		344B18F02EB8800200808CAF /* TeamPoint.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TeamPoint.xctestplan; sourceTree = "<group>"; };
 		3487E2DC2EB7D23A004392FF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		3489FD932EB27E4A00D78C88 /* TeamPoint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TeamPoint.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3489FDA02EB27E4C00D78C88 /* TeamPointTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TeamPointTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +103,7 @@
 		3489FD8A2EB27E4A00D78C88 = {
 			isa = PBXGroup;
 			children = (
+				344B18F02EB8800200808CAF /* TeamPoint.xctestplan */,
 				3487E2DC2EB7D23A004392FF /* AppIcon.icon */,
 				3489FD952EB27E4A00D78C88 /* TeamPoint */,
 				3489FDA32EB27E4C00D78C88 /* TeamPointTests */,

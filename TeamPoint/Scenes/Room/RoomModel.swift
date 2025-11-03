@@ -81,11 +81,6 @@ final class RoomModel {
     var players: [Player]
     var state: State
     
-    var averageScore: Double {
-        let sum = players.reduce(0, { $0 + ($1.cardValue ?? 0) })
-        return Double(sum) / Double(players.count)
-    }
-    
     init(players: [Player], state: State) {
         self.players = players
         self.state = state
@@ -99,9 +94,13 @@ final class RoomModel {
         case .lobby:
             self.state = .lobby
         case .finished:
-            let pointsSum = mappedPlayers.reduce(0, { $0 + ($1.cardValue ?? 0) })
-            let averageValue = Double(pointsSum) / Double(mappedPlayers.count)
-            self.state = .finished(averageScore: averageValue)
+            if mappedPlayers.count == 0 {
+                self.state = .finished(averageScore: 0.0)
+            } else {
+                let pointsSum = mappedPlayers.reduce(0, { $0 + ($1.cardValue ?? 0) })
+                let averageValue = Double(pointsSum) / Double(mappedPlayers.count)
+                self.state = .finished(averageScore: averageValue)
+            }
         case .selecting:
             let totalPlayers = mappedPlayers.count
             let playersWhoSelected = mappedPlayers.filter { $0.selectedCardIndex != nil }.count

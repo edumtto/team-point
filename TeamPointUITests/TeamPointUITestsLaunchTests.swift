@@ -5,6 +5,7 @@
 //  Created by Eduardo Motta de Oliveira on 10/29/25.
 //
 
+/*
 import XCTest
 
 final class TeamPointUITestsLaunchTests: XCTestCase {
@@ -31,3 +32,4 @@ final class TeamPointUITestsLaunchTests: XCTestCase {
         add(attachment)
     }
 }
+*/

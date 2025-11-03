@@ -31,7 +31,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     let playerId: String
     let isHost: Bool
     
-    @Published var roomModel: RoomModel = .init(players: [], state: .lobby)
+    @Published var roomModel: RoomModel
     @Published var showCardSelector: Bool = false
     @Published var selectedCardIndex: Int? = nil
     
@@ -39,7 +39,13 @@ final class RoomViewModel: RoomViewModelProtocol {
         "TeamPoint: Join room number \(roomNumber)."
     }
     
-    init(roomNumber: String, playerId: String, playerName: String, isHost: Bool, socketService: SocketServiceProtocol) {
+    init(
+        roomNumber: String,
+        playerId: String,
+        playerName: String,
+        isHost: Bool,
+        socketService: SocketServiceProtocol
+    ) {
         self.roomNumber = roomNumber
         self.playerId = playerId
         self.playerName = playerName
@@ -107,7 +113,9 @@ extension RoomViewModel: SocketGameDelegate {
     
     func didUpdateGame(_ gameData: GameData) {
         print("didUpdateGame delegate called")
-        roomModel = RoomModel(gameData: gameData)
-        updateStatePresentation()
+        let newRoomModel = RoomModel(gameData: gameData)
+        self.roomModel = newRoomModel
+        self.updateStatePresentation()
     }
 }
+
