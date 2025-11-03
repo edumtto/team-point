@@ -8,17 +8,24 @@
 import Combine
 import Foundation
 
-protocol RoomProtocol {
-    func startVoting()
-    func vote(points: Int, playerName: String)
-    func revealVotes()
-    func restartVoting()
+protocol RoomViewModelProtocol: ObservableObject {
+    var roomNumber: String { get }
+    var playerName: String { get }
+    var playerId: String { get }
     var isHost: Bool { get }
+    var roomModel: RoomModel { get }
+    var showCardSelector: Bool { get }
+    var selectedCardIndex: Int? { get }
+    var shareableRoomNumber: String { get }
+    func handleHostAction()
+    func selectCard(cardIndex: Int)
+    func leaveRoom()
 }
 
 @MainActor
-final class RoomViewModel: ObservableObject {
+final class RoomViewModel: RoomViewModelProtocol {
     private var socketService: SocketServiceProtocol
+    
     let roomNumber: String
     let playerName: String
     let playerId: String
@@ -54,6 +61,17 @@ final class RoomViewModel: ObservableObject {
         }
     }
     
+    func selectCard(cardIndex: Int) {
+        selectedCardIndex = selectedCardIndex == cardIndex ? nil : cardIndex
+        let playerData = GameData.Player(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
+        socketService.selectCard(roomNumber: roomNumber, player: playerData)
+    };
+    
+    func leaveRoom() {
+        print("Leaving room...")
+        socketService.leaveRoom(roomNumber: roomNumber, playerId: playerId)
+    }
+    
     private func updateStatePresentation() {
         switch roomModel.state {
         case .lobby:
@@ -65,11 +83,6 @@ final class RoomViewModel: ObservableObject {
             showCardSelector = false
             selectedCardIndex = nil
         }
-    }
-    
-    func leaveRoom() {
-        print("Leaving room...")
-        socketService.leaveRoom(roomNumber: roomNumber, playerId: playerId)
     }
     
     private func startGame() {
@@ -85,12 +98,6 @@ final class RoomViewModel: ObservableObject {
         updateStatePresentation()
         socketService.endGame(roomNumber: roomNumber)
     }
-    
-    func selectCard(_ cardIndex: Int) {
-        selectedCardIndex = selectedCardIndex == cardIndex ? nil : cardIndex
-        let playerData = GameData.Player(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
-        socketService.selectCard(roomNumber: roomNumber, player: playerData)
-    };
 }
 
 extension RoomViewModel: SocketGameDelegate {

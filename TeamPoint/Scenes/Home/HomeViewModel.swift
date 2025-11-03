@@ -8,10 +8,25 @@
 import SwiftUI
 import Combine
 
-protocol HomeViewModelProtocol {
-    func joinRoom(code: String, playerName: String)
-    func createRoom(playerName: String)
+protocol HomeViewModelProtocol: ObservableObject, AnyObject {
+    var roomNumber: String { get }
+    var playerName: String { get }
+    var playerId: String { get }
+    var showNamePopup: Bool { get }
+    var actionType: HomeActionType? { get }
+    var error: SocketError? { get }
+    var isLoading: Bool { get }
+    var navigateToRoom: Bool { get }
+    var isUserHost: Bool { get }
+    var isJoinButtonEnabled: Bool { get }
+    var isContinueButtonEnabled: Bool { get }
+    var popupTitle: String { get }
+    
     func updateRoomNumber(_ newValue: String)
+    func startJoinRoom()
+    func startCreateRoom()
+    func cancelNameEntry()
+    func confirmAction()
 }
 
 enum HomeActionType {
@@ -19,14 +34,13 @@ enum HomeActionType {
 }
 
 @MainActor
-class HomeViewModel: ObservableObject {
+class HomeViewModel: HomeViewModelProtocol {
     private var socketService: SocketServiceProtocol
     private let maxRoomNumberLength = 5
     
     @Published var roomNumber: String = ""
     @Published var playerName: String = ""
     @Published var playerId: String = UUID().uuidString
-    
     @Published var showNamePopup = false
     @Published var actionType: HomeActionType?
     @Published var error: SocketError?
@@ -35,6 +49,18 @@ class HomeViewModel: ObservableObject {
     
     var isUserHost: Bool {
         actionType == .create
+    }
+    
+    var isJoinButtonEnabled: Bool {
+        roomNumber.count == maxRoomNumberLength
+    }
+    
+    var isContinueButtonEnabled: Bool {
+        !playerName.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+    
+    var popupTitle: String {
+        actionType == .join ? "Join Room" : "Create Room"
     }
     
     init(socketService: SocketServiceProtocol) {
@@ -74,23 +100,6 @@ class HomeViewModel: ObservableObject {
         // TODO: Consume an API to get a valid newRoomNumber
         String(Int.random(in: 10000...99999))
     }
-    
-    private func resetForm() {
-        showNamePopup = false
-//        playerName = ""
-    }
-    
-    var isJoinButtonEnabled: Bool {
-        roomNumber.count == maxRoomNumberLength
-    }
-    
-    var isContinueButtonEnabled: Bool {
-        !playerName.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-    
-    var popupTitle: String {
-        actionType == .join ? "Join Room" : "Create Room"
-    }
 }
 
 extension HomeViewModel: SocketConnectionDelegate {
@@ -102,7 +111,7 @@ extension HomeViewModel: SocketConnectionDelegate {
     func didJoinRoom() {
         isLoading = false
         navigateToRoom = true
-        resetForm()
+        showNamePopup = false
     }
     
 }

@@ -207,10 +207,15 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(isPresented: $viewModel.navigateToRoom) {
-                RoomView(roomNumber: viewModel.roomNumber, playerId: viewModel.playerId, playerName: viewModel.playerName, isHost: viewModel.isUserHost)
+                RoomView(
+                    roomNumber: viewModel.roomNumber,
+                    playerId: viewModel.playerId,
+                    playerName: viewModel.playerName,
+                    isHost: viewModel.isUserHost
+                )
             }
             
-            .alert(item: $viewModel.error) { error in
+            .alert(item: $viewModel.error) { (error: SocketError) in
                     Alert(
                         title: Text("Join Error"),
                         message: Text(error.localizedDescription),
