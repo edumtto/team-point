@@ -88,6 +88,8 @@ class HomeViewModel: ObservableObject {
             isNewRoom: actionType == .create,
             playerId: playerId, playerName: playerName
         )
+        
+        roomNumber = room
     }
     
     private func getNewRoomNumber() -> String {
