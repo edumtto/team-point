@@ -23,6 +23,7 @@ protocol SocketGameDelegate: AnyObject {
 protocol SocketServiceProtocol {
     func establishConnection()
     func joinRoom(roomNumber: String, isNewRoom: Bool, playerId: String, playerName: String)
+    func leaveRoom(roomNumber: String, playerId: String)
     
     func startGame()
     func selectCard(player: GameData.Player)
@@ -38,6 +39,7 @@ final class SocketService: ObservableObject {
     private enum Event: String {
         // Client -> Server
         case join
+        case leave
         case startGame
         case selectCard
         case endGame
@@ -96,24 +98,6 @@ final class SocketService: ObservableObject {
                 print("❌ Decoding Error for 'updateGame' event: \(error)")
             }
         }
-        
-        
-        // Simple example parsing: Expecting a dictionary with 'sender' and 'text'
-        //            if let sender = jsonArray["sender"] as? String,
-        //               let text = jsonArray["text"] as? String {
-        //
-        //                let newMessage = Message(sender: sender, text: text)
-        //                print("Received message from \(newMessage.sender): \(newMessage.text)")
-        //
-        //                // Call the handler closure in the ViewModel
-        //                self.onReceiveMessage?(newMessage)
-        //            } else {
-        //                print("Failed to parse incoming message data.")
-        //            }
-        
-        // Example of sending an acknowledgement if required by the server
-        // ack.with("Got it!")
-        //        }
     }
     
     private func logEmitError(_ error: SocketError, eventName: String) {
@@ -151,6 +135,19 @@ extension SocketService: SocketServiceProtocol {
             self?.connectionDelegate?.didJoinRoom()
         }
         print("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
+    }
+    
+    func leaveRoom(roomNumber: String, playerId: String) {
+        guard isConnected else {
+            return
+        }
+        
+        let data: [String : Any] = [
+            "roomNumber": roomNumber,
+            "playerId": playerId
+        ]
+        
+        socket.emit(Event.leave.name, data)
     }
     
     func startGame() {

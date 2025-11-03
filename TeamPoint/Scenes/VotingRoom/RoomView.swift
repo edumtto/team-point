@@ -262,12 +262,28 @@ struct RoomView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: {
+                    viewModel.leaveRoom()
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "chevron.backward")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: viewModel.shareableRoomNumber) {
+                    Label("Share room number", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
     }
 }
 
 // MARK: - Preview
 #Preview {
     NavigationStack {
-        RoomView(roomNumber: "12345", playerName: "James", isHost: true)
+        RoomView(roomNumber: "12345", playerId: UUID().uuidString, playerName: "James", isHost: true)
     }
 }

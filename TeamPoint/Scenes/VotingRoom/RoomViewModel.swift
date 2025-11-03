@@ -56,20 +56,26 @@ final class RoomViewModel: ObservableObject {
         }
     }
     
+    func leaveRoom() {
+        print("Leaving room...")
+        socketService.leaveRoom(roomNumber: roomNumber, playerId: playerId)
+    }
+    
     private func startGame() {
         print("Starting game...")
-        roomState = .selecting(count: 0, total: players.count)
+        roomModel.state = .selecting(count: 0, total: roomModel.players.count)
         socketService.startGame()
     }
     
     private func endGame() {
         print("Revealing cards...")
-        roomState = .finished
+        roomModel.state = .finished
         socketService.endGame()
     }
     
     func selectCard(_ cardIndex: Int) {
         selectedCardIndex = selectedCardIndex == cardIndex ? nil : cardIndex
+        let playerData = GameData.Player(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
         socketService.selectCard(player: playerData)
     }
 }
