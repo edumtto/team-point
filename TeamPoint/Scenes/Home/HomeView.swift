@@ -207,7 +207,7 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(isPresented: $viewModel.navigateToRoom) {
-                RoomView(roomNumber: viewModel.roomNumber, playerName: viewModel.playerName, isHost: viewModel.isUserHost)
+                RoomView(roomNumber: viewModel.roomNumber, playerId: viewModel.playerId, playerName: viewModel.playerName, isHost: viewModel.isUserHost)
             }
             
             .alert(item: $viewModel.error) { error in

@@ -213,13 +213,15 @@ struct CardSelectorView: View {
 
 // MARK: - Main Room View
 struct RoomView: View {
+    @Environment(\.presentationMode) var presentationMode
     @StateObject private var viewModel: RoomViewModel
     
-    init(roomNumber: String, playerName: String, isHost: Bool) {
+    init(roomNumber: String, playerId: String, playerName: String, isHost: Bool) {
         _viewModel = StateObject(
             wrappedValue:
                 RoomViewModel(
                     roomNumber: roomNumber,
+                    playerId: playerId,
                     playerName: playerName,
                     isHost: isHost,
                     socketService: SocketService.shared
@@ -232,19 +234,19 @@ struct RoomView: View {
             // Header
             RoomHeaderView(
                 roomNumber: viewModel.roomNumber,
-                roomState: viewModel.roomState
+                roomState: viewModel.roomModel.state
             )
             
             // Players Grid (Main Area)
             PlayersGridView(
-                players: viewModel.players,
-                roomState: $viewModel.roomState
+                players: viewModel.roomModel.players,
+                roomState: $viewModel.roomModel.state
             )
             
             // Host Control Button (Only visible to host)
             if viewModel.isHost {
                 HostControlButton(
-                    roomState: $viewModel.roomState,
+                    roomState: $viewModel.roomModel.state,
                     onTap: viewModel.handleHostAction
                 )
             }

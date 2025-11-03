@@ -24,31 +24,29 @@ final class RoomViewModel: ObservableObject {
     let playerId: String
     let isHost: Bool
     
-    private var playerData: GameData.Player {
-        .init(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
-    }
-    
-    @Published var roomState: RoomModel.State = .lobby
+    @Published var roomModel: RoomModel = .init(players: [], state: .lobby)
     @Published var showCardSelector: Bool = false
-    
-    @Published var players: [RoomModel.Player] = []
-    
     @Published var selectedCardIndex: Int? = nil
     
-    init(roomNumber: String, playerName: String, isHost: Bool, socketService: SocketServiceProtocol) {
+    var shareableRoomNumber: String {
+        "TeamPoint: Join room number \(roomNumber)."
+    }
+    
+    init(roomNumber: String, playerId: String, playerName: String, isHost: Bool, socketService: SocketServiceProtocol) {
         self.roomNumber = roomNumber
+        self.playerId = playerId
         self.playerName = playerName
         self.isHost = isHost
-        
-        self.playerId = UUID().uuidString
-        self.players = [RoomModel.Player(id: playerId, name: playerName)]
+    
+        let players = [RoomModel.Player(id: playerId, name: playerName)]
+        self.roomModel = RoomModel(players: players, state: .lobby)
         
         self.socketService = socketService
         self.socketService.gameDelegate = self
     }
     
     func handleHostAction() {
-        switch roomState {
+        switch roomModel.state {
         case .lobby, .finished:
             startGame()
             showCardSelector = true
@@ -83,7 +81,7 @@ extension RoomViewModel: SocketGameDelegate {
     
     func didUpdateGame(_ gameData: GameData) {
         print("didUpdateGame delegate called")
-        print(gameData)
+        roomModel = RoomModel(gameData: gameData)
     }
 }
 

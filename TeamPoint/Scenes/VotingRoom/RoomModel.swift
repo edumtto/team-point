@@ -7,7 +7,7 @@
 
 // Presentation model
 @MainActor
-struct RoomModel {
+final class RoomModel {
     enum State: Equatable {
         case lobby
         case selecting(count: Int, total: Int)
@@ -76,8 +76,13 @@ struct RoomModel {
         }
     }
     
-    let players: [Player]
-    let state: State
+    var players: [Player]
+    var state: State
+    
+    init(players: [Player], state: State) {
+        self.players = players
+        self.state = state
+    }
     
     init(gameData: GameData) {
         let mappedPlayers = gameData.players.map(Player.init).sorted { $0.name < $1.name }
