@@ -156,7 +156,7 @@ struct SelectableCard: View {
             ZStack {
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
                     .fill(isSelected ?
-                          AppTheme.Colors.buttonGradient :
+                          AppTheme.Colors.cardGradient :
                             LinearGradient(colors: [Color.white, Color.white],
                                            startPoint: .top,
                                            endPoint: .bottom))

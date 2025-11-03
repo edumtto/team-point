@@ -31,6 +31,32 @@ const getRoomState = (roomNumber) => {
     return JSON.parse(JSON.stringify(globalGameState[roomNumber]));
 };
 
+// --- NEW REST API ENDPOINT ---
+/**
+ * REST Endpoint: GET /api/room/status/:roomCode
+ * Action: Checks if a room exists and returns its status.
+ */
+app.get('/api/room/status/:roomNumber', (req, res) => {
+    const roomNumber = req.params.roomNumber;
+
+    if (!roomNumber) {
+        return res.status(400).json({ error: 'Room number is required.' });
+    }
+    
+    const roomExists = !!globalGameState[roomCode];
+    return res.json({ available: roomExists });
+});
+
+/**
+ * REST Endpoint: GET /api/room/status/:roomCode
+ * Action: Checks if a room exists and returns its status.
+ */
+app.get('/api/room/newNumber', (req, res) => {
+    let randomRoomNumber = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
+    // TODO: Check registered room number to avoid number colision
+    return res.json({ roomNumber: randomRoomNumber });
+});
+
 // --- Socket.IO Event Handlers ---
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);

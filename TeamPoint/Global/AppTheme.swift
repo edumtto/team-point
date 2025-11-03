@@ -10,18 +10,30 @@ import SwiftUI
 struct AppTheme {
     // Colors
     struct Colors {
-        static let primaryGradient = LinearGradient(
+        static let backgroundGradient = LinearGradient(
             colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.4)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
-        static let buttonGradient = LinearGradient(
+        static let cardGradient = LinearGradient(
             colors: [Color.purple, Color.blue],
             startPoint: .leading,
             endPoint: .trailing
         )
         
+        static let strongButtonGradient = LinearGradient(
+            colors: [Color.purple, Color.blue],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        
+        static let softbuttonGradient = LinearGradient(
+            colors: [Color.teal.opacity(0.8), Color.blue.opacity(0.8)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+
         static let cardBackground = Color(.systemBackground)
         static let inputBackground = Color(.systemGray6)
         static let overlayBackground = Color.black.opacity(0.4)
@@ -65,7 +77,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding()
             .background(
                 isEnabled ?
-                    AnyView(AppTheme.Colors.buttonGradient) :
+                    AnyView(AppTheme.Colors.strongButtonGradient) :
                     AnyView(Color.gray)
             )
             .cornerRadius(AppTheme.CornerRadius.medium)

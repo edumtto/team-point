@@ -59,7 +59,7 @@ final class SocketService: ObservableObject {
     }
     
     init () {
-        self.manager = SocketManager(socketURL: GlobalConstants.socketURL, config: [.log(false), .reconnectAttempts(5), .reconnectWait(3), .compress])
+        self.manager = SocketManager(socketURL: GlobalConstants.baseURL, config: [.log(false), .reconnectAttempts(5), .reconnectWait(3), .compress])
         self.socket = manager.defaultSocket
         setupEventListeners()
         establishConnection()

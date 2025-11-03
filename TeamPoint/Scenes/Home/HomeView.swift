@@ -131,7 +131,7 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
                 // Bacwkground gradient
-                AppTheme.Colors.primaryGradient
+                AppTheme.Colors.backgroundGradient
                     .ignoresSafeArea()
                 
                 VStack(spacing: AppTheme.Spacing.xxlarge) {
@@ -218,9 +218,7 @@ struct HomeView: View {
                     )
                 }
             }
-            //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showNamePopup)
-            //            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showError)
-        
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.showNamePopup)
     }
 }
 

@@ -8,6 +8,6 @@
 import Foundation
 
 enum GlobalConstants {
-    static let socketURL = URL(string: "http://localhost:3000")!
+    static let baseURL = URL(string: "http://localhost:3000")!
     static let availableCards: [Int] = [0, 1, 2, 3, 5, 8, 13, 20, 40, 100]
 }
