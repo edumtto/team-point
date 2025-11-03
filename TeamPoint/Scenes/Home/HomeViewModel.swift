@@ -14,23 +14,6 @@ protocol HomeViewModelProtocol {
     func updateRoomNumber(_ newValue: String)
 }
 
-// MARK: - Models
-enum RoomError: Error, Identifiable {
-    case joinFailed(message: String)
-    var id: String {
-        switch self {
-        case .joinFailed(let message):
-            return message
-        }
-    }
-    var localizedDescription: String {
-        switch self {
-        case .joinFailed(let message):
-            return "Failed to join room: \(message)"
-        }
-    }
-}
-
 enum HomeActionType {
     case join, create
 }

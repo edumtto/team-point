@@ -73,7 +73,6 @@ io.on('connection', (socket) => {
     * Event: "join"
     * Params: {
     *    roomNumber: String,
-    *    isNewRoom: Bool,
     *    playerId: String,
     *    playerName: String
     *}
@@ -99,7 +98,7 @@ io.on('connection', (socket) => {
         socket.join(roomNumber);
         console.log(playerName + ' joined room: ' + roomNumber);
         
-        // Store client information
+        // Store client information for future disconect event
         socket.data.roomNumber = roomNumber;
         socket.data.playerId = playerId;
         
@@ -111,12 +110,14 @@ io.on('connection', (socket) => {
     
     /**
      * Event: "startGame"
+     * Params: {
+     *    roomNumber: String,
+     *}
      * Action: Starts a new round. Clears previous selections, sets state to 'selecting', sets reveal to false.
      * Response: Broadcasts the updated global state to the room.
      */
-    socket.on('startGame', () => {
-        const roomNumber = socket.data.roomNumber;
-        console.log(`>> Game started in room ${roomNumber}.`);
+    socket.on('startGame', (data) => {
+        const roomNumber = data.roomNumber;
         if (!roomNumber || !globalGameState[roomNumber]) return;
 
         const roomState = globalGameState[roomNumber];
@@ -132,12 +133,16 @@ io.on('connection', (socket) => {
     
     /**
     * Event: "leave"
+     * Params: {
+     *    roomNumber: String,
+     *    playerId: String
+     *}
     * Action: Player explicitly leaves the room.
     * Logic: Removes the player from the state and deletes the room if it becomes empty.
     */
     socket.on('leave', (data) => {
-        const roomNumber = socket.data.roomNumber;
-        const playerId = socket.data.playerId || socket.id;
+        const roomNumber = data.roomNumber;
+        const playerId = data.playerId;
         
         socket.leave(roomNumber);
         removePlayerAndCleanRoom(playerId, roomNumber);
@@ -148,17 +153,18 @@ io.on('connection', (socket) => {
     
     /**
      * Event: "selectCard"
-     * Params: { playerId: String, cardIndex: Int }
+     * Params: {
+     *    roomNumber: String,
+     *    playerId: String,
+     *    cardIndex: Int
+     *}
      * Action: Player selects a card. Updates the player's selectedCardIndex.
      * Response: Broadcasts the updated global state to the room.
      */
     socket.on('selectCard', (data) => {
+        const roomNumber = data.roomNumber;
         const playerId = data.playerId;
         const cardIndex = data.cardIndex;
-        const roomNumber = socket.data.roomNumber;
-        
-        console.log(`Player ID: ${playerId}`);
-        console.log(`Card ID: ${cardIndex}`);
         
         const roomState = globalGameState[roomNumber];
         const player = roomState.players.find(p => p.id === playerId);
@@ -183,9 +189,9 @@ io.on('connection', (socket) => {
      * Action: Ends the current game.
      * Response: Broadcasts the updated global state to the room.
      */
-    socket.on('endGame', () => {
+    socket.on('endGame', (data) => {
         const roomNumber = socket.data.roomNumber;
-        if (!roomNumber || !globalGameState[roomNumber]) return;
+        if (!globalGameState[roomNumber]) return;
 
         const roomState = globalGameState[roomNumber];
 
