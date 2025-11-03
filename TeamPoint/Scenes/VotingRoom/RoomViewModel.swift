@@ -77,7 +77,7 @@ final class RoomViewModel: ObservableObject {
         selectedCardIndex = selectedCardIndex == cardIndex ? nil : cardIndex
         let playerData = GameData.Player(id: playerId, name: playerName, selectedCardIndex: selectedCardIndex ?? -1)
         socketService.selectCard(player: playerData)
-    }
+    };
 }
 
 extension RoomViewModel: SocketGameDelegate {
@@ -90,4 +90,3 @@ extension RoomViewModel: SocketGameDelegate {
         roomModel = RoomModel(gameData: gameData)
     }
 }
-

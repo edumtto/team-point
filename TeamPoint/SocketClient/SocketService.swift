@@ -22,7 +22,7 @@ protocol SocketGameDelegate: AnyObject {
 
 protocol SocketServiceProtocol {
     func establishConnection()
-    func joinRoom(roomNumber: String, isNewRoom: Bool, playerId: String, playerName: String)
+    func joinRoom(roomNumber: String, playerId: String, playerName: String)
     func leaveRoom(roomNumber: String, playerId: String)
     
     func startGame()
@@ -117,7 +117,7 @@ extension SocketService: SocketServiceProtocol {
         }
     }
     
-    func joinRoom(roomNumber: String, isNewRoom: Bool, playerId: String, playerName: String) {
+    func joinRoom(roomNumber: String, playerId: String, playerName: String) {
         guard isConnected else {
             connectionDelegate?.didFail(error: .notConnected)
             socket.connect()
@@ -126,7 +126,6 @@ extension SocketService: SocketServiceProtocol {
         
         let data: [String : Any] = [
             "roomNumber": roomNumber,
-            "isNewRoom": isNewRoom,
             "playerId": playerId,
             "playerName": playerName
         ]
@@ -142,12 +141,7 @@ extension SocketService: SocketServiceProtocol {
             return
         }
         
-        let data: [String : Any] = [
-            "roomNumber": roomNumber,
-            "playerId": playerId
-        ]
-        
-        socket.emit(Event.leave.name, data)
+        socket.emit(Event.leave.name)
     }
     
     func startGame() {
@@ -178,7 +172,7 @@ extension SocketService: SocketServiceProtocol {
         
         let data: [String: Any] = [
             "playerId": player.id,
-            "cardId": player.selectedCardIndex
+            "cardIndex": player.selectedCardIndex
         ]
         
         socket.emit(Event.selectCard.name, data)

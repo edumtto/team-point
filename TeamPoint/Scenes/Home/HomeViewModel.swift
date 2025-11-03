@@ -83,12 +83,7 @@ class HomeViewModel: ObservableObject {
     func confirmAction() {
         isLoading = true
         let room = actionType == .join ? roomNumber : getNewRoomNumber()
-        socketService.joinRoom(
-            roomNumber: room,
-            isNewRoom: actionType == .create,
-            playerId: playerId, playerName: playerName
-        )
-        
+        socketService.joinRoom(roomNumber: room, playerId: playerId, playerName: playerName)
         roomNumber = room
     }
     
