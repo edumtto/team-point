@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum HomeViewField: Hashable {
+    case roomNumber
+    case playerName
+}
+
 // MARK: - Reusable Components
 struct LogoView: View {
     var body: some View {
@@ -63,6 +68,7 @@ struct RoomInputSection: View {
 
 struct NamePopupView: View {
     @Binding var playerName: String
+    @FocusState.Binding var focusedField: HomeViewField?
     let title: String
     let isContinueEnabled: Bool
     let onCancel: () -> Void
@@ -80,6 +86,7 @@ struct NamePopupView: View {
             
             TextField("Your name", text: $playerName)
                 .inputFieldStyle()
+                .focused($focusedField, equals: .playerName)
             
             HStack(spacing: AppTheme.Spacing.medium) {
                 Button(action: onCancel) {
@@ -126,6 +133,7 @@ struct LoadingView: View {
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel(socketService: SocketService.shared)
+    @FocusState private var focusedField: HomeViewField?
     
     var body: some View {
         NavigationStack {
@@ -198,12 +206,16 @@ struct HomeView: View {
                     
                     NamePopupView(
                         playerName: $viewModel.playerName,
+                        focusedField: $focusedField,
                         title: viewModel.popupTitle,
                         isContinueEnabled: viewModel.isContinueButtonEnabled,
                         onCancel: viewModel.cancelNameEntry,
                         onContinue: viewModel.confirmAction
                     )
                     .transition(.scale.combined(with: .opacity))
+                    .task(id: viewModel.showNamePopup) {
+                        focusedField = viewModel.showNamePopup ? .playerName : nil
+                    }
                 }
             }
             .navigationDestination(isPresented: $viewModel.navigateToRoom) {
