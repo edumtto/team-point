@@ -104,6 +104,10 @@ struct NamePopupView: View {
         .padding(AppTheme.Spacing.xlarge)
         .background(AppTheme.Colors.cardBackground)
         .cornerRadius(AppTheme.CornerRadius.large)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                .stroke(.white, lineWidth: 0.5)
+        )
         .shadow(color: AppTheme.Shadows.popup, radius: 20)
         .padding(.horizontal, AppTheme.Spacing.xxlarge)
     }
