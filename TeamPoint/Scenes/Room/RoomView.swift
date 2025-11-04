@@ -171,7 +171,7 @@ struct SelectableCard: View {
                 
                 Text("\(value)")
                     .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(isSelected ? .white : .primary)
+                    .foregroundColor(isSelected ? .white : .black)
             }
             .offset(y: isSelected ? -10 : 0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
