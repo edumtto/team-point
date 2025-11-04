@@ -4,11 +4,6 @@ TeamPoint is a simple, real-time application for agile teams to estimate user st
 ## 🚀 Quick Start
 TeamPoint requires running both the client app (iOS/macOS) and a Node.js server.
 
-### 📱 Client (Swift/Xcode)
-1. Open TeamPoint.xcodeproj in Xcode.
-
-2. Build and run the app in the simulator or on a device.
-
 ### 🖥️ Server (Node.js/Socket.io)
 1. Navigate to the SocketIOServer directory.
 
@@ -22,6 +17,13 @@ npm install express socket.io
 ```bash
 node index.js
 ```
+
+### 📱 Client (Swift/Xcode)
+1. Open TeamPoint.xcodeproj in Xcode.
+
+2. Build and run the app in the simulator or on a device.
+
+Note: For physical device builds, set ```GlobalConstants.baseURL``` to your server IP.
 
 ## 🛠️ Tech Stack
 Client: Swift / Xcode
