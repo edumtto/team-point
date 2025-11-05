@@ -7,6 +7,7 @@
 
 import Combine
 import Foundation
+import OSLog
 
 protocol RoomViewModelProtocol: ObservableObject {
     var roomNumber: String { get }
@@ -25,6 +26,7 @@ protocol RoomViewModelProtocol: ObservableObject {
 @MainActor
 final class RoomViewModel: RoomViewModelProtocol {
     private var socketService: SocketServiceProtocol
+    private let logger = Logger(subsystem: "teampoint", category: "room")
     
     let roomNumber: String
     let playerName: String
@@ -75,7 +77,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     };
     
     func leaveRoom() {
-        print("Leaving room...")
+        logger.log("Leaving room")
         socketService.leaveRoom(roomNumber: roomNumber, playerId: playerId)
     }
     
@@ -93,15 +95,14 @@ final class RoomViewModel: RoomViewModelProtocol {
     }
     
     private func startGame() {
-        print("Starting game...")
+        logger.log("Starting game")
         roomModel.state = .selecting(count: 0, total: roomModel.players.count)
         updateStatePresentation()
         socketService.startGame(roomNumber: roomNumber)
     }
     
     private func endGame() {
-        print("Revealing cards...")
-//        roomModel.state = .finished
+        logger.log("Revealing cards")
         updateStatePresentation()
         socketService.endGame(roomNumber: roomNumber)
     }
@@ -113,7 +114,6 @@ extension RoomViewModel: SocketGameDelegate {
     }
     
     func didUpdateGame(_ gameData: GameData) {
-        print("didUpdateGame delegate called")
         let newRoomModel = RoomModel(gameData: gameData)
         self.roomModel = newRoomModel
         self.updateStatePresentation()

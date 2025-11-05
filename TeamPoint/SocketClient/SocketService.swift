@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import SocketIO
+import OSLog
 
 protocol SocketConnectionDelegate: AnyObject {
     func didJoinRoom()
@@ -35,6 +36,10 @@ protocol SocketServiceProtocol {
 final class SocketService: ObservableObject {
     static let shared = SocketService()
     
+    private let manager: SocketManager
+    private let socket: SocketIOClient
+    private let logger = Logger(subsystem: "teampoint", category: "socket")
+    
     private enum Event: String {
         // Client -> Server
         case join
@@ -49,15 +54,13 @@ final class SocketService: ObservableObject {
         var name: String { rawValue }
     }
     
-    enum EventAck: String {
+    private enum EventAck: String {
         case success
         case failure
         
         var value: String { rawValue }
     }
     
-    private let manager: SocketManager
-    private let socket: SocketIOClient
     weak var connectionDelegate: SocketConnectionDelegate?
     weak var gameDelegate: SocketGameDelegate?
     
@@ -73,25 +76,26 @@ final class SocketService: ObservableObject {
     }
     
     private func setupEventListeners() {
-        socket.on(clientEvent: .connect) { data, ack in
-            print("Socket connected!")
+        socket.on(clientEvent: .connect) { [weak self] data, ack in
+            self?.logger.log("Socket connected.")
         }
         
-        socket.on(clientEvent: .disconnect) { data, ack in
-            print("Socket disconnected.")
+        socket.on(clientEvent: .disconnect) { [weak self] data, ack in
+            self?.logger.log("Socket disconnected.")
         }
         
-        socket.on(clientEvent: .error) { data, ack in
+        socket.on(clientEvent: .error) { [weak self] data, ack in
+           
             if let error = data.first as? Error {
-                print("Socket error: \(error.localizedDescription)")
+                self?.logger.error("\(error.localizedDescription)")
             } else {
-                print("Socket error: \(data)")
+                self?.logger.log("Socket error: \(data)")
             }
         }
         
         socket.on(Event.updateGame.name) { [weak self] data, ack in
             guard let self, let payload = data.first as? [String: Any] else {
-                print("Error: 'join' event received but no valid payload found.")
+                self?.logger.error("'join' event received but no valid payload found.")
                 return
             }
             
@@ -101,7 +105,7 @@ final class SocketService: ObservableObject {
                 let decodedData = try decoder.decode(GameData.self, from: jsonData)
                 self.gameDelegate?.didUpdateGame(decodedData)
             } catch {
-                print("❌ Decoding Error for 'updateGame' event: \(error)")
+                self.logger.error("Decoding Error for 'updateGame' event: \(error)")
             }
         }
     }
@@ -109,7 +113,7 @@ final class SocketService: ObservableObject {
     private func logEmitError(_ error: SocketError, eventName: String) {
         switch error {
         case .notConnected, .notJoined:
-            print("Socket not connected. Cannot emit '\(eventName)'.")
+            logger.error("Socket not connected. Cannot emit '\(eventName)'.")
         }
     }
 }
@@ -142,7 +146,7 @@ extension SocketService: SocketServiceProtocol {
             }
             self?.connectionDelegate?.didJoinRoom()
         }
-        print("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
+        logger.log("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
     }
     
     func leaveRoom(roomNumber: String, playerId: String) {
