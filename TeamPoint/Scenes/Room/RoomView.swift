@@ -278,6 +278,13 @@ struct RoomView: View {
                 }
             }
         }
+        .alert(item: $viewModel.error) { (error: SocketError) in
+            Alert(
+                title: Text("Connection Error"),
+                message: Text(error.localizedDescription),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
 }
 

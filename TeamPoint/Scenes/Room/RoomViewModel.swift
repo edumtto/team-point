@@ -34,6 +34,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     @Published var roomModel: RoomModel
     @Published var showCardSelector: Bool = false
     @Published var selectedCardIndex: Int? = nil
+    @Published var error: SocketError? = nil
     
     var shareableRoomNumber: String {
         "TeamPoint: Join room number \(roomNumber)."
@@ -108,7 +109,7 @@ final class RoomViewModel: RoomViewModelProtocol {
 
 extension RoomViewModel: SocketGameDelegate {
     func didFail(error: SocketError) {
-        print("didFail delegate called")
+        self.error = error
     }
     
     func didUpdateGame(_ gameData: GameData) {
