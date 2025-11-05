@@ -104,7 +104,7 @@ io.on('connection', (socket) => {
     *}
     * Action: Player joins a specific room namespace.
     */
-    socket.on('join', (data) => {
+    socket.on('join', (data, callback) => {
         const roomNumber = data.roomNumber;
         const playerId = data.playerId;
         const playerName = data.playerName;
@@ -123,6 +123,9 @@ io.on('connection', (socket) => {
         
         socket.join(roomNumber);
         console.log(playerName + ' joined room: ' + roomNumber);
+        
+        // Send Ack back
+        callback("success");
         
         // Store client information for future disconect event
         socket.data.roomNumber = roomNumber;

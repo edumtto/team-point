@@ -49,6 +49,13 @@ final class SocketService: ObservableObject {
         var name: String { rawValue }
     }
     
+    enum EventAck: String {
+        case success
+        case failure
+        
+        var value: String { rawValue }
+    }
+    
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var connectionDelegate: SocketConnectionDelegate?
@@ -92,7 +99,6 @@ final class SocketService: ObservableObject {
                 let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
                 let decoder = JSONDecoder()
                 let decodedData = try decoder.decode(GameData.self, from: jsonData)
-                // Dispatch to main actor before calling the delegate
                 self.gameDelegate?.didUpdateGame(decodedData)
             } catch {
                 print("❌ Decoding Error for 'updateGame' event: \(error)")
@@ -130,7 +136,10 @@ extension SocketService: SocketServiceProtocol {
             "playerName": playerName
         ]
         
-        socket.emit("join", data) { [weak self] in
+        socket.emitWithAck("join", data).timingOut(after: 1) { [weak self] ackData in
+            guard let ack = ackData.first as? String, ack == EventAck.success.value else {
+                return
+            }
             self?.connectionDelegate?.didJoinRoom()
         }
         print("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
