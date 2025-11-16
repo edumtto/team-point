@@ -97,7 +97,7 @@ class HomeViewModel: HomeViewModelProtocol {
     func confirmAction() {
         isLoading = true
         let room = actionType == .join ? roomNumber : getNewRoomNumber()
-        socketService.joinRoom(roomNumber: room, playerId: playerId, playerName: playerName)
+        socketService.joinRoom(create: actionType == .create, roomNumber: room, playerId: playerId, playerName: playerName)
         roomNumber = room
     }
     

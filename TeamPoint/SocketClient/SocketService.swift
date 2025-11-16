@@ -24,7 +24,7 @@ protocol SocketGameDelegate: AnyObject {
 
 protocol SocketServiceProtocol {
     func establishConnection()
-    func joinRoom(roomNumber: String, playerId: String, playerName: String)
+    func joinRoom(create: Bool, roomNumber: String, playerId: String, playerName: String)
     func leaveRoom(roomNumber: String, playerId: String)
     
     func startGame(roomNumber: String)
@@ -125,18 +125,25 @@ extension SocketService: SocketServiceProtocol {
         }
     }
     
-    func joinRoom(roomNumber: String, playerId: String, playerName: String) {
+    func joinRoom(create: Bool, roomNumber: String, playerId: String, playerName: String) {
         let params: [String : Any] = [
+            "create": create,
             "roomNumber": roomNumber,
             "playerId": playerId,
             "playerName": playerName
         ]
         
         socket.emitWithAck("join", params).timingOut(after: 1) { [weak self] ackData in
-            guard let self, let ack = ackData.first as? String, ack == EventAck.success.value else {
+            guard let self, let ack = ackData.first as? String, let result = EventAck(rawValue: ack) else {
                 return
             }
-            self.connectionDelegate?.didJoinRoom()
+            
+            switch result {
+            case .success:
+                self.connectionDelegate?.didJoinRoom()
+            case .failure:
+                self.connectionDelegate?.didFail(error: .roomNotFound)
+            }
         }
         logger.log("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
     }

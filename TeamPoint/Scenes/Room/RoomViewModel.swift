@@ -17,6 +17,8 @@ protocol RoomViewModelProtocol: ObservableObject {
     var roomModel: RoomModel { get }
     var showCardSelector: Bool { get }
     var selectedCardIndex: Int? { get }
+    var error: SocketError? { get }
+    var isReconnecting: Bool { get }
     var shareableRoomNumber: String { get }
     func reconnect()
     func handleHostAction()
@@ -139,6 +141,6 @@ extension RoomViewModel: SocketGameDelegate {
     func didReconnect() {
         isReconnecting = false
         logger.log("Rejoining room")
-        socketService.joinRoom(roomNumber: roomNumber, playerId: playerId, playerName: playerName)
+        socketService.joinRoom(create: false, roomNumber: roomNumber, playerId: playerId, playerName: playerName)
     }
 }

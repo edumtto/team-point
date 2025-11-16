@@ -10,12 +10,18 @@ import Foundation
 enum SocketError: String, LocalizedError, Identifiable {
     case connectionFailed
     case emittingFailed
+    case roomNotFound
     
     var id: String {
         self.rawValue
     }
     
     var errorDescription: String? {
-        "Error connecting. Check your internet connection."
+        switch self {
+        case .roomNotFound:
+            "Invalid room number."
+        default:
+            "Error connecting. Check your internet connection."
+        }
     }
 }

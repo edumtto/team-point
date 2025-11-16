@@ -56,8 +56,14 @@ export default function registerSocketHandlers(io, db) {
         
         // Event: "join"
         socket.on('join', async (data, callback) => {
-            const { roomNumber, playerId, playerName } = data;
+            const { create, roomNumber, playerId, playerName } = data;
             const player = {id: playerId, name: playerName, selectedCardIndex: -1};
+            
+            // Joining but room doesn't exist
+            if (!create && !db.data.rooms[roomNumber]) {
+                callback("failure");
+                return;
+            }
 
             if (!db.data.rooms[roomNumber]) {
                 db.data.rooms[roomNumber] = { players: [player], state: 'lobby' };

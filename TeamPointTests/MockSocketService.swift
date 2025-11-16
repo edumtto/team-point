@@ -12,6 +12,7 @@ final class MockSocketService: SocketServiceProtocol {
     var establishConnectionCallCount = 0
     
     var joinRoomCallCount = 0
+    var lastJoinCreate: Bool?
     var lastJoinRoomNumber: String?
     var lastJoinRoomPlayerId: String?
     var lastJoinRoonPlayerName: String?
@@ -33,8 +34,9 @@ final class MockSocketService: SocketServiceProtocol {
         establishConnectionCallCount += 1
     }
     
-    func joinRoom(roomNumber: String, playerId: String, playerName: String) {
+    func joinRoom(create: Bool, roomNumber: String, playerId: String, playerName: String) {
         joinRoomCallCount += 1
+        lastJoinCreate = create
         lastJoinRoomNumber = roomNumber
         lastJoinRoomPlayerId = playerId
         lastJoinRoonPlayerName = playerName
