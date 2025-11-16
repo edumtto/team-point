@@ -50,6 +50,12 @@ final class HomeViewModelTests: XCTestCase {
         XCTAssertTrue(mockSocketService.connectionDelegate === sut)
     }
     
+    // MARK: - Reconnection Tests
+    func testReconnect() {
+        sut.reconnect()
+        XCTAssertEqual(mockSocketService.establishConnectionCallCount, 1)
+    }
+    
     // MARK: - Room Number Update Tests
     
     func testUpdateRoomNumberWithValidDigits() {
