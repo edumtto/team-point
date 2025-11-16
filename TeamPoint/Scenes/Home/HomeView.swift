@@ -230,7 +230,9 @@ struct HomeView: View {
                     isHost: viewModel.isUserHost
                 )
             }
-            
+            .onAppear(perform: {
+                SocketService.shared.connectionDelegate = viewModel
+            })
             .alert(item: $viewModel.error) { (error: SocketError) in
                     Alert(
                         title: Text("Join Error"),

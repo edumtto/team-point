@@ -10,10 +10,11 @@ import SwiftUI
 // MARK: - Reusable Components
 struct RoomHeaderView: View {
     let roomNumber: String
-    let roomState: RoomModel.State
+    let message: String
+    let isReconnecting: Bool
     
     var body: some View {
-        VStack(spacing: AppTheme.Spacing.small) {
+        VStack(spacing: AppTheme.Spacing.large) {
             HStack {
                 Image(systemName: "door.left.hand.open")
                     .font(.title3)
@@ -25,10 +26,14 @@ struct RoomHeaderView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.blue)
             }
-            
-            Text(roomState.description)
-                .font(.subheadline)
-                .foregroundColor(AppTheme.Colors.textSecondary)
+            HStack {
+                if isReconnecting {
+                    ProgressView()
+                }
+                Text(isReconnecting ? "Reconnecting..." : message)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity)
@@ -107,7 +112,7 @@ struct PlayersGridView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: AppTheme.Spacing.large) {
-                ForEach(players) { player in
+                ForEach(players, id: \.id) { player in
                     PlayerCardView(player: player, roomState: $roomState)
                 }
             }
@@ -234,7 +239,8 @@ struct RoomView: View {
             // Header
             RoomHeaderView(
                 roomNumber: viewModel.roomNumber,
-                roomState: viewModel.roomModel.state
+                message: viewModel.roomModel.state.description,
+                isReconnecting: viewModel.isReconnecting
             )
             
             // Players Grid (Main Area)

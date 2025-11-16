@@ -38,7 +38,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     @Published var showCardSelector: Bool = false
     @Published var selectedCardIndex: Int? = nil
     @Published var error: SocketError? = nil
-    @Published var disconected: Bool = false
+    @Published var isReconnecting: Bool = false
     
     var shareableRoomNumber: String {
         "TeamPoint: Join room number \(roomNumber)."
@@ -61,10 +61,13 @@ final class RoomViewModel: RoomViewModelProtocol {
         
         self.socketService = socketService
         self.socketService.gameDelegate = self
+        self.socketService.connectionDelegate = nil
     }
     
     func reconnect() {
+        error = nil
         socketService.establishConnection()
+        isReconnecting = true
     }
     
     func handleHostAction() {
@@ -84,6 +87,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     
     func leaveRoom() {
         logger.log("Leaving room")
+        socketService.gameDelegate = nil
         socketService.leaveRoom(roomNumber: roomNumber, playerId: playerId)
     }
     
@@ -116,7 +120,10 @@ final class RoomViewModel: RoomViewModelProtocol {
 
 extension RoomViewModel: SocketGameDelegate {
     func didFail(error: SocketError) {
-        self.error = error
+        if error == .emittingFailed {
+            self.error = error
+        }
+        isReconnecting = true
     }
     
     func didUpdateGame(_ gameData: GameData) {
@@ -125,9 +132,13 @@ extension RoomViewModel: SocketGameDelegate {
         self.updateStatePresentation()
     }
     
+    func didDisconnect() {
+        isReconnecting = true
+    }
+    
     func didReconnect() {
+        isReconnecting = false
         logger.log("Rejoining room")
         socketService.joinRoom(roomNumber: roomNumber, playerId: playerId, playerName: playerName)
     }
 }
-

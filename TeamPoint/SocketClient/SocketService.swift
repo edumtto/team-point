@@ -18,6 +18,7 @@ protocol SocketConnectionDelegate: AnyObject {
 protocol SocketGameDelegate: AnyObject {
     func didFail(error: SocketError)
     func didUpdateGame(_ gameData: GameData)
+    func didDisconnect()
     func didReconnect()
 }
 
@@ -84,14 +85,17 @@ final class SocketService: ObservableObject {
         }
         
         socket.on(clientEvent: .disconnect) { [weak self] data, ack in
-            self?.logger.log("Socket disconnected.")
+            guard let self else { return }
+            self.logger.log("Socket disconnected.")
+            self.gameDelegate?.didDisconnect()
         }
         
         socket.on(clientEvent: .error) { [weak self] data, ack in
             guard let self else { return }
-            self.logger.log("Socket error: \(data) \(self.socket.status.description)")
+            self.logger.log("Socket error: \(data)")
             
-            let error: SocketError = self.socket.status == .disconnected ? .emittingFailed : .connectionFailed
+            let isEmittingError = (data.first as? String)?.contains("emitting") ?? false
+            let error: SocketError = isEmittingError ? .emittingFailed : .connectionFailed
             self.gameDelegate?.didFail(error: error)
             self.connectionDelegate?.didFail(error: error)
         }
@@ -116,10 +120,8 @@ final class SocketService: ObservableObject {
 
 extension SocketService: SocketServiceProtocol {
     func establishConnection() {
-        if socket.status != .connected {
-            socket.connect(timeoutAfter: 5) { [weak self] in
-                self?.connectionDelegate?.didFail(error: .connectionFailed)
-            }
+        if socket.status == .notConnected || socket.status == .disconnected {
+            socket.connect(timeoutAfter: 5) {}
         }
     }
     
@@ -131,10 +133,10 @@ extension SocketService: SocketServiceProtocol {
         ]
         
         socket.emitWithAck("join", params).timingOut(after: 1) { [weak self] ackData in
-            guard let ack = ackData.first as? String, ack == EventAck.success.value else {
+            guard let self, let ack = ackData.first as? String, ack == EventAck.success.value else {
                 return
             }
-            self?.connectionDelegate?.didJoinRoom()
+            self.connectionDelegate?.didJoinRoom()
         }
         logger.log("Emitted 'join' event for:\nchannel: \(roomNumber)\nplayerId: \(playerId)\nplayerName: \(playerName)")
     }
