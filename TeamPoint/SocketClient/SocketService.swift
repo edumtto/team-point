@@ -18,6 +18,7 @@ protocol SocketConnectionDelegate: AnyObject {
 protocol SocketGameDelegate: AnyObject {
     func didFail(error: SocketError)
     func didUpdateGame(_ gameData: GameData)
+    func didReconnect()
 }
 
 protocol SocketServiceProtocol {
@@ -77,7 +78,9 @@ final class SocketService: ObservableObject {
     
     private func setupEventListeners() {
         socket.on(clientEvent: .connect) { [weak self] data, ack in
-            self?.logger.log("Socket connected.")
+            guard let self else { return }
+            self.logger.log("Socket connected.")
+            self.gameDelegate?.didReconnect()
         }
         
         socket.on(clientEvent: .disconnect) { [weak self] data, ack in

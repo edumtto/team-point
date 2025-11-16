@@ -21,7 +21,7 @@ export default function registerSocketHandlers(io, db) {
         const state = getRoomState(roomNumber);
         if (state) {
             io.to(roomNumber).emit('updateGame', state);
-            console.log(`[${roomNumber}] State updated. Players: ${state.players.length}, State: ${state.state}`);
+            console.log(`[${roomNumber}] Game updated. Players: ${state.players.length}, State: ${state.state}`);
         }
     };
     

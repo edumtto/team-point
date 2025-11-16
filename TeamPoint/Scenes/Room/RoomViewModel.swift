@@ -124,5 +124,10 @@ extension RoomViewModel: SocketGameDelegate {
         self.roomModel = newRoomModel
         self.updateStatePresentation()
     }
+    
+    func didReconnect() {
+        logger.log("Rejoining room")
+        socketService.joinRoom(roomNumber: roomNumber, playerId: playerId, playerName: playerName)
+    }
 }
 
