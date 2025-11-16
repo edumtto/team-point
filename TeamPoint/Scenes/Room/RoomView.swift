@@ -282,7 +282,9 @@ struct RoomView: View {
             Alert(
                 title: Text("Connection Error"),
                 message: Text(error.localizedDescription),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text("Try again"), action: {
+                    viewModel.reconnect()
+                })
             )
         }
     }

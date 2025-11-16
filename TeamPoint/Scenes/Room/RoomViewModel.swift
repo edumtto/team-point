@@ -18,6 +18,7 @@ protocol RoomViewModelProtocol: ObservableObject {
     var showCardSelector: Bool { get }
     var selectedCardIndex: Int? { get }
     var shareableRoomNumber: String { get }
+    func reconnect()
     func handleHostAction()
     func selectCard(cardIndex: Int)
     func leaveRoom()
@@ -37,6 +38,7 @@ final class RoomViewModel: RoomViewModelProtocol {
     @Published var showCardSelector: Bool = false
     @Published var selectedCardIndex: Int? = nil
     @Published var error: SocketError? = nil
+    @Published var disconected: Bool = false
     
     var shareableRoomNumber: String {
         "TeamPoint: Join room number \(roomNumber)."
@@ -59,6 +61,10 @@ final class RoomViewModel: RoomViewModelProtocol {
         
         self.socketService = socketService
         self.socketService.gameDelegate = self
+    }
+    
+    func reconnect() {
+        socketService.establishConnection()
     }
     
     func handleHostAction() {

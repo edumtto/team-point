@@ -235,7 +235,9 @@ struct HomeView: View {
                     Alert(
                         title: Text("Join Error"),
                         message: Text(error.localizedDescription),
-                        dismissButton: .default(Text("OK"))
+                        dismissButton: .default(Text("Try again"), action: {
+                            viewModel.reconnect()
+                        })
                     )
                 }
             }

@@ -22,6 +22,7 @@ protocol HomeViewModelProtocol: ObservableObject, AnyObject {
     var isContinueButtonEnabled: Bool { get }
     var popupTitle: String { get }
     
+    func reconnect()
     func updateRoomNumber(_ newValue: String)
     func startJoinRoom()
     func startCreateRoom()
@@ -66,6 +67,10 @@ class HomeViewModel: HomeViewModelProtocol {
     init(socketService: SocketServiceProtocol) {
         self.socketService = socketService
         self.socketService.connectionDelegate = self
+    }
+    
+    func reconnect() {
+        socketService.establishConnection()
     }
     
     func updateRoomNumber(_ newValue: String) {

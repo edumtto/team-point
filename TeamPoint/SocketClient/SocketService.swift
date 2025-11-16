@@ -69,7 +69,7 @@ final class SocketService: ObservableObject {
     }
     
     init () {
-        self.manager = SocketManager(socketURL: GlobalConstants.baseURL, config: [.log(false), .reconnectAttempts(5), .reconnectWait(3), .compress])
+        self.manager = SocketManager(socketURL: GlobalConstants.baseURL, config: [.log(false), .reconnects(false), .compress])
         self.socket = manager.defaultSocket
         setupEventListeners()
         establishConnection()
@@ -85,12 +85,12 @@ final class SocketService: ObservableObject {
         }
         
         socket.on(clientEvent: .error) { [weak self] data, ack in
-           
-            if let error = data.first as? Error {
-                self?.logger.error("\(error.localizedDescription)")
-            } else {
-                self?.logger.log("Socket error: \(data)")
-            }
+            guard let self else { return }
+            self.logger.log("Socket error: \(data) \(self.socket.status.description)")
+            
+            let error: SocketError = self.socket.status == .disconnected ? .emittingFailed : .connectionFailed
+            self.gameDelegate?.didFail(error: error)
+            self.connectionDelegate?.didFail(error: error)
         }
         
         socket.on(Event.updateGame.name) { [weak self] data, ack in
@@ -109,38 +109,25 @@ final class SocketService: ObservableObject {
             }
         }
     }
-    
-    private func logEmitError(_ error: SocketError, eventName: String) {
-        switch error {
-        case .notConnected, .notJoined:
-            logger.error("Socket not connected. Cannot emit '\(eventName)'.")
-        }
-    }
 }
 
 extension SocketService: SocketServiceProtocol {
     func establishConnection() {
         if socket.status != .connected {
             socket.connect(timeoutAfter: 5) { [weak self] in
-                self?.connectionDelegate?.didFail(error: .notConnected)
+                self?.connectionDelegate?.didFail(error: .connectionFailed)
             }
         }
     }
     
     func joinRoom(roomNumber: String, playerId: String, playerName: String) {
-        guard isConnected else {
-            connectionDelegate?.didFail(error: .notConnected)
-            socket.connect()
-            return
-        }
-        
-        let data: [String : Any] = [
+        let params: [String : Any] = [
             "roomNumber": roomNumber,
             "playerId": playerId,
             "playerName": playerName
         ]
         
-        socket.emitWithAck("join", data).timingOut(after: 1) { [weak self] ackData in
+        socket.emitWithAck("join", params).timingOut(after: 1) { [weak self] ackData in
             guard let ack = ackData.first as? String, ack == EventAck.success.value else {
                 return
             }
@@ -150,59 +137,37 @@ extension SocketService: SocketServiceProtocol {
     }
     
     func leaveRoom(roomNumber: String, playerId: String) {
-        guard isConnected else {
-            return
-        }
-        
-        let data: [String : Any] = [
+        let params: [String : Any] = [
             "roomNumber": roomNumber,
             "playerId": playerId
         ]
         
-        socket.emit(Event.leave.name, data)
+        socket.emit(Event.leave.name, params)
     }
     
     func startGame(roomNumber: String) {
-        guard isConnected else {
-            gameDelegate?.didFail(error: .notConnected)
-            logEmitError(.notConnected, eventName: Event.startGame.name)
-            return
-        }
-        
-        let data: [String : Any] = [
+        let params: [String : Any] = [
             "roomNumber": roomNumber,
         ]
         
-        socket.emit(Event.startGame.name, data)
+        socket.emit(Event.startGame.name, params)
     }
     
     func endGame(roomNumber: String) {
-        guard isConnected else {
-            gameDelegate?.didFail(error: .notConnected)
-            logEmitError(.notConnected, eventName: Event.endGame.name)
-            return
-        }
-        
-        let data: [String : Any] = [
+        let params: [String : Any] = [
             "roomNumber": roomNumber,
         ]
         
-        socket.emit(Event.endGame.name, data)
+        socket.emit(Event.endGame.name, params)
     }
     
     func selectCard(roomNumber: String, player: GameData.Player) {
-        guard isConnected else {
-            gameDelegate?.didFail(error: .notConnected)
-            logEmitError(.notConnected, eventName: Event.selectCard.name)
-            return
-        }
-        
-        let data: [String: Any] = [
+        let params: [String: Any] = [
             "roomNumber": roomNumber,
             "playerId": player.id,
             "cardIndex": player.selectedCardIndex
         ]
-        
-        socket.emit(Event.selectCard.name, data)
+
+        socket.emit(Event.selectCard.name, params)
     }
 }

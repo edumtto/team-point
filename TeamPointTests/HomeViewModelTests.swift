@@ -242,7 +242,7 @@ final class HomeViewModelTests: XCTestCase {
     
     func testDidFailWithError() {
         sut.isLoading = true
-        let expectedError = SocketError.notConnected
+        let expectedError = SocketError.connectionFailed
         
         mockSocketService.simulateError(expectedError)
         

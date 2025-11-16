@@ -247,7 +247,7 @@ final class RoomViewModelTests: XCTestCase {
     }
     
     func testDidFail_DoesNotCrash() {
-        let error = SocketError.notConnected
+        let error = SocketError.connectionFailed
         
         sut.didFail(error: error)
         
