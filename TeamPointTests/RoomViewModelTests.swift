@@ -31,6 +31,8 @@ final class RoomViewModelTests: XCTestCase {
     }
     
     override func tearDown() {
+        mockSocketService.connectionDelegate = nil
+        mockSocketService.gameDelegate = nil
         sut = nil
         mockSocketService = nil
         cancellables = nil
@@ -62,38 +64,40 @@ final class RoomViewModelTests: XCTestCase {
         XCTAssertTrue(mockSocketService.gameDelegate === sut)
     }
     
-    // TODO: Figure out why this test is crashing
-//    func testInitialization_NonHostPlayer() {
-//        let nonHostViewModel = RoomViewModel(
-//            roomNumber: "5678",
-//            playerId: "player2",
-//            playerName: "Jane",
-//            isHost: false,
-//            socketService: mockSocketService
-//        )
-//        
-//        XCTAssertFalse(nonHostViewModel.isHost)
-//        XCTAssertEqual(nonHostViewModel.roomNumber, "5678")
-//    }
+    func testInitialization_NonHostPlayer() async {
+        // Keep instance alive for the duration of the test and yield once to avoid
+        // teardown/deinit racing with other callbacks on the main actor.
+        let nonHostViewModel = RoomViewModel(
+            roomNumber: "5678",
+            playerId: "player2",
+            playerName: "Jane",
+            isHost: false,
+            socketService: mockSocketService
+        )
+        
+        XCTAssertFalse(nonHostViewModel.isHost)
+        XCTAssertEqual(nonHostViewModel.roomNumber, "5678")
+        XCTAssertTrue(mockSocketService.gameDelegate === nonHostViewModel)
+        
+        // Allow main actor to process any pending tasks before the function returns
+        // which helps avoid deinit racing with other main-actor work.
+        await Task.yield()
+    }
+    
+    // MARK: - Reconnect Tests
+    func testReconnect_EstablishConnection() {
+        sut.reconnect()
+        
+        XCTAssertEqual(mockSocketService.establishConnectionCallCount, 1)
+        XCTAssertNil(sut.error)
+        XCTAssertTrue(sut.isReconnecting)
+    }
     
     // MARK: - Shareable Room Number Tests
     
     func testShareableRoomNumber_ReturnsCorrectFormat() {
         XCTAssertEqual(sut.shareableRoomNumber, "TeamPoint: Join room number 1234.")
     }
-    
-    // TODO: Figure out why this test is crashing
-//    func testShareableRoomNumber_UpdatesWithDifferentRoomNumber() {
-//        let newViewModel = RoomViewModel(
-//            roomNumber: "9999",
-//            playerId: "player1",
-//            playerName: "John",
-//            isHost: true,
-//            socketService: mockSocketService
-//        )
-//        
-//        XCTAssertEqual(newViewModel.shareableRoomNumber, "TeamPoint: Join room number 9999.")
-//    }
     
     // MARK: - Host Action Tests
     
@@ -184,7 +188,7 @@ final class RoomViewModelTests: XCTestCase {
         XCTAssertEqual(mockSocketService.lastLeftPlayerId, "player1")
     }
     
-    // MARK: - Socket Delegate Tests
+    // MARK: - Socket Delegate Tests (didUpdateGame)
     
     func testDidUpdateGame_UpdatesRoomModel() async {
         let players = [
@@ -246,6 +250,27 @@ final class RoomViewModelTests: XCTestCase {
         XCTAssertNil(sut.selectedCardIndex)
     }
     
+    // Additional didUpdateGame coverage: finished average computation does not toggle reconnecting
+    func testDidUpdateGame_ToFinished_ComputesAverageAndKeepsReconnectingUntouched() async {
+        sut.isReconnecting = true
+        // Suppose GlobalConstants.availableCards indexes map; we just assert finished state exists
+        let players = [
+            GameData.Player(id: "p1", name: "A", selectedCardIndex: -1),
+            GameData.Player(id: "p2", name: "B", selectedCardIndex: -1)
+        ]
+        let gameData = GameData(players: players, state: .finished)
+        
+        await mockSocketService.simulateUpdate(gameData: gameData)
+        
+        if case .finished(let avg) = sut.roomModel.state {
+            // With both -1, average should be 0.0 per RoomModel logic
+            XCTAssertEqual(avg, 0.0, accuracy: 0.0001)
+        } else {
+            XCTFail("Expected finished state")
+        }
+        XCTAssertTrue(sut.isReconnecting, "didUpdateGame should not change reconnecting state")
+    }
+    
     func testDidFail_DoesNotCrash() {
         let error = SocketError.connectionFailed
         
@@ -254,89 +279,66 @@ final class RoomViewModelTests: XCTestCase {
         // Test passes if no crash occurs
     }
     
-    // TODO: Figure out why throse tests are crashing
-    // MARK: - Published Properties Tests
-    /*
-    func testRoomModelPublisher_PublishesChanges() async {
-        let expectation = XCTestExpectation(description: "Room model published")
-        var publishedCount = 0
+    // MARK: - Socket Delegate Tests (didFail / didDisconnect / didReconnect)
+    
+    func testDidFail_WithEmittingFailed_SetsErrorAndReconnecting() {
+        XCTAssertNil(sut.error)
+        XCTAssertFalse(sut.isReconnecting)
         
-        sut.$roomModel
-            .dropFirst()
-            .sink { _ in
-                publishedCount += 1
-                expectation.fulfill()
-            }
-            .store(in: &cancellables)
+        sut.didFail(error: .emittingFailed)
         
-        let gameData = GameData(
-            players: [GameData.Player(id: "player1", name: "John", selectedCardIndex: -1)],
-            state: .lobby
-        )
-        await mockSocketService.simulateUpdate(gameData: gameData)
-        
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(publishedCount, 1)
+        XCTAssertEqual(sut.error, .emittingFailed)
+        XCTAssertTrue(sut.isReconnecting)
     }
     
-    func testShowCardSelectorPublisher_PublishesChanges() {
-        let expectation = XCTestExpectation(description: "Show card selector published")
-        var publishedValue: Bool?
+    func testDidFail_WithConnectionFailed_SetsReconnectingOnly() {
+        sut.error = nil
+        sut.isReconnecting = false
         
-        sut.$showCardSelector
-            .dropFirst()
-            .sink { value in
-                publishedValue = value
-                expectation.fulfill()
-            }
-            .store(in: &cancellables)
+        sut.didFail(error: .connectionFailed)
         
-        sut.handleHostAction()
-        
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertTrue(publishedValue ?? false)
+        XCTAssertNil(sut.error)
+        XCTAssertTrue(sut.isReconnecting)
     }
     
-    func testSelectedCardIndexPublisher_PublishesChanges() {
-        let expectation = XCTestExpectation(description: "Selected card index published")
-        var publishedValue: Int?
+    func testDidDisconnect_SetsReconnecting() {
+        sut.isReconnecting = false
         
-        sut.$selectedCardIndex
-            .dropFirst()
-            .sink { value in
-                publishedValue = value
-                expectation.fulfill()
-            }
-            .store(in: &cancellables)
+        sut.didDisconnect()
         
-        sut.selectCard(cardIndex: 7)
-        
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(publishedValue, 7)
+        XCTAssertTrue(sut.isReconnecting)
     }
-    */
+    
+    func testDidReconnect_ClearsReconnectingAndJoinsRoom() {
+        sut.isReconnecting = true
+        
+        sut.didReconnect()
+        
+        XCTAssertFalse(sut.isReconnecting)
+        XCTAssertEqual(mockSocketService.joinRoomCallCount, 1)
+        XCTAssertEqual(mockSocketService.lastJoinCreate, false)
+        XCTAssertEqual(mockSocketService.lastJoinRoomNumber, "1234")
+        XCTAssertEqual(mockSocketService.lastJoinRoomPlayerId, "player1")
+        XCTAssertEqual(mockSocketService.lastJoinRoonPlayerName, "John")
+    }
+    
     // MARK: - Integration Tests
     
     func testCompleteGameFlow() async {
-        // Start in lobby
         XCTAssertEqual(sut.roomModel.state, .lobby)
         XCTAssertFalse(sut.showCardSelector)
         
-        // Start game
         sut.handleHostAction()
         XCTAssertTrue(sut.showCardSelector)
         XCTAssertEqual(mockSocketService.startGameCallCount, 1)
         
-        // Select card
         sut.selectCard(cardIndex: 3)
         XCTAssertEqual(sut.selectedCardIndex, 3)
         XCTAssertEqual(mockSocketService.selectCardCallCount, 1)
         
-        // End game
         sut.handleHostAction()
         XCTAssertEqual(mockSocketService.endGameCallCount, 1)
         
-        // Simulate game finished
         let gameData = GameData(
             players: [GameData.Player(id: "player1", name: "John", selectedCardIndex: 3)],
             state: .finished
@@ -369,3 +371,4 @@ final class RoomViewModelTests: XCTestCase {
         }
     }
 }
+
