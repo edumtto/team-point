@@ -1,6 +1,10 @@
 # TeamPoint: Planning Poker Made Simple
 TeamPoint is a simple, real-time application for agile teams to estimate user stories using the Planning Poker technique.
 
+## App Screenshot
+
+<img width="300" alt="App Screenshot" src="https://github.com/user-attachments/assets/887392c5-05bd-4297-908d-6c6faa78c4f2" />
+
 ## 🚀 Quick Start
 TeamPoint requires running both the client app (iOS/macOS) and a Node.js server.
 
